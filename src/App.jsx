@@ -36,6 +36,7 @@ import {
   callGeminiForTranslation,
   callGeminiTtsApi,
 } from "./services/api";
+import { GoogleGenAI } from "@google/genai/web";
 import { base64ToArrayBuffer, pcmToWav } from "./services/audio";
 import {
   EMPTY_SB_CONFIG,
@@ -55,7 +56,6 @@ import {
 } from "./services/chat";
 
 import MessageItem from "./components/MessageItem";
-import LoadingMessage from "./components/LoadingMessage";
 import SummaryModal from "./components/SummaryModal";
 import SettingsModal from "./components/SettingsModal";
 import SchemaInitModal from "./components/SchemaInitModal";
@@ -290,6 +290,248 @@ export default function App() {
   };
 
   const submitMessage = async (messageContent) => {
+    const db = client;
+    const trimmed = messageContent.trim();
+    if (!trimmed || isLoading || !userId || !db) return;
+
+    setIsLoading(true);
+    setCurrentInput("");
+    setSuggestedReplies([]);
+    setIsSessionActive(true);
+
+    const userMessage = {
+      id: `user-${Date.now()}`,
+      role: "user",
+      content: trimmed,
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, userMessage]);
+
+    try {
+      let currentSessionId = activeSessionId;
+      if (!currentSessionId) {
+        currentSessionId = await createSession(
+          db,
+          appId,
+          userId,
+          trimmed.substring(0, 40) + "..."
+        );
+        setActiveSessionId(currentSessionId);
+      }
+
+      // 不在流式生成过程中写入数据库，等待完整响应后再统一写入
+
+      const historyForApi = [
+        ...messages.map((m) => ({
+          role: m.role,
+          parts: [{ text: m.content }],
+        })),
+        { role: "user", parts: [{ text: trimmed }] },
+      ];
+
+      const modelToUse = selectedModel;
+
+      const modelMessageId = `model-${Date.now()}`;
+      const modelCreatedAt = new Date().toISOString();
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: modelMessageId,
+          role: "model",
+          content: "",
+          isLoading: true,
+          thinkingProcess: null,
+          sources: [],
+          generatedWithThinking: isThinkingMode,
+          generatedWithSearch: isSearchMode,
+          created_at: modelCreatedAt,
+        },
+      ]);
+
+      const aiClient = new GoogleGenAI({
+        apiKey: userApiKey || "",
+      });
+
+      const params = {
+        model: modelToUse,
+        contents: historyForApi,
+      };
+
+      const systemInstructions = [
+        "Respond *only* with the plain text answer. Do not include pinyin, romanization, or automatic translations unless the user explicitly asks for them.",
+      ];
+
+      if (systemInstructions.length > 0) {
+        params.systemInstruction = {
+          parts: [{ text: systemInstructions.join(" ") }],
+        };
+      }
+
+      if (isThinkingMode) {
+        params.config = {
+          thinkingConfig: {
+            thinkingBudget: -1,
+            includeThoughts: true,
+          },
+        };
+      }
+
+      if (isSearchMode) {
+        params.tools = [{ google_search: {} }];
+      }
+      console.log("params", params);
+      const stream = await aiClient.models.generateContentStream(params);
+
+      let fullText = "";
+      const thoughtParts = [];
+      let sources = [];
+
+      for await (const chunk of stream) {
+        const delta = chunk.text || "";
+        if (delta) {
+          fullText += delta;
+
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === modelMessageId ? { ...m, content: fullText } : m
+            )
+          );
+        }
+
+        const candidate =
+          chunk.candidates && chunk.candidates.length > 0
+            ? chunk.candidates[0]
+            : null;
+
+        if (
+          candidate &&
+          candidate.content &&
+          Array.isArray(candidate.content.parts)
+        ) {
+          candidate.content.parts.forEach((part) => {
+            if (part.thought && part.text) {
+              thoughtParts.push(part.text);
+            }
+          });
+        }
+
+        const groundingMetadata = candidate && candidate.groundingMetadata;
+        if (
+          groundingMetadata &&
+          Array.isArray(groundingMetadata.groundingAttributions)
+        ) {
+          sources = groundingMetadata.groundingAttributions
+            .map((attribution) => ({
+              uri: attribution.web?.uri,
+              title: attribution.web?.title,
+            }))
+            .filter((s) => s.uri && s.title);
+        }
+      }
+
+      const thinkingProcess =
+        thoughtParts.length > 0 ? thoughtParts.join("").trim() || null : null;
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === modelMessageId
+            ? {
+                ...m,
+                content: fullText,
+                thinkingProcess,
+                sources: sources || [],
+                generatedWithThinking: !!thinkingProcess,
+                generatedWithSearch: isSearchMode,
+                isLoading: false,
+              }
+            : m
+        )
+      );
+
+      const finalHistoryForReplies = [
+        ...historyForApi,
+        { role: "model", parts: [{ text: fullText }] },
+      ];
+
+      let suggestedReplies = [];
+      try {
+        suggestedReplies = await fetchSuggestedReplies(
+          finalHistoryForReplies,
+          false
+        );
+        setSuggestedReplies(suggestedReplies);
+      } catch (e) {
+        console.error("Failed to fetch suggested replies:", e);
+        setSuggestedReplies([]);
+      }
+
+      setTimeout(() => {
+        // 在完成整个流式响应后，再统一持久化用户消息和模型消息
+        addUserMessage(db, appId, userId, currentSessionId, trimmed).catch(
+          (e) => console.error("Failed to save user message:", e)
+        );
+
+        const messageData = {
+          content: fullText,
+          thinkingProcess,
+          sources: sources || [],
+          suggestedReplies,
+          generatedWithThinking: !!thinkingProcess,
+          generatedWithSearch: isSearchMode,
+        };
+
+        addModelMessage(db, appId, userId, currentSessionId, messageData).catch(
+          (e) => console.error("Failed to save model message:", e)
+        );
+      }, 200);
+
+      if (isAutoPlayTts && fullText) {
+        handleStopAudio();
+        try {
+          const { audioData, mimeType } = await callGeminiTtsApi(
+            fullText,
+            userApiKey
+          );
+          if (!mimeType.includes("rate="))
+            throw new Error("Invalid TTS mimeType");
+          const sampleRate = parseInt(mimeType.match(/rate=(\d+)/)[1], 10);
+          const pcmData = base64ToArrayBuffer(audioData);
+          const pcm16 = new Int16Array(pcmData);
+          const wavBlob = pcmToWav(pcm16, sampleRate);
+          const audioUrl = URL.createObjectURL(wavBlob);
+          const audio = new Audio(audioUrl);
+          setCurrentAudio(audio);
+          setPlayingMessageId("auto-play");
+          audio.play();
+          audio.onended = () => {
+            setPlayingMessageId(null);
+            setCurrentAudio(null);
+            URL.revokeObjectURL(audioUrl);
+          };
+        } catch (ttsError) {
+          console.error("Auto-play TTS failed:", ttsError);
+          if (currentAudio) currentAudio.pause();
+          setCurrentAudio(null);
+          setPlayingMessageId(null);
+        }
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+      setMessages((prev) => [
+        ...prev.filter((msg) => msg.id !== userMessage.id),
+        {
+          id: `error-${Date.now()}`,
+          role: "model",
+          content: "抱歉，发送消息时出错，请重试。",
+          created_at: new Date().toISOString(),
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const submitMessageLegacy = async (messageContent) => {
     const db = client;
     const trimmed = messageContent.trim();
     if (!trimmed || isLoading || !userId || !db) return;
@@ -869,7 +1111,6 @@ export default function App() {
                 />
               ));
             })()}
-            {isLoading && <LoadingMessage />}
 
             {suggestedReplies.length > 0 && (
               <div className="flex justify-start mb-4">
