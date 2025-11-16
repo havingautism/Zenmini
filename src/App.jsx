@@ -1088,7 +1088,12 @@ export default function App() {
               const lastModelMessageIndex = [...messages].findLastIndex(
                 (m) => m.role === "model"
               );
-              return messages.map((msg, index) => (
+              const orderedMessages = [...messages].sort((a, b) => {
+                const at = a.created_at ? new Date(a.created_at).getTime() : 0;
+                const bt = b.created_at ? new Date(b.created_at).getTime() : 0;
+                return at - bt;
+              });
+              return orderedMessages.map((msg, index) => (
                 <MessageItem
                   key={msg.id || index}
                   msg={msg}
@@ -1101,7 +1106,7 @@ export default function App() {
                   translatedText={translations[msg.id] || ""}
                   expandedSourcesMessageId={expandedSourcesMessageId}
                   setExpandedSourcesMessageId={setExpandedSourcesMessageId}
-                  isLastMessage={index === messages.length - 1}
+                  isLastMessage={index === orderedMessages.length - 1}
                   onCopy={handleCopy}
                   copiedMessageId={copiedMessageId}
                   onRegenerate={handleRegenerate}
