@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev)",
+      "WebFetch(domain:ai.google.dev)",
+      "WebSearch"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
