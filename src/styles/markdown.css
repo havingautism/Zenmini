@@ -1,0 +1,150 @@
+/* 优化的Markdown样式 - 浅色主题 */
+
+.markdown-content {
+  line-height: 1.7;
+  color: #333;
+}
+
+/* 代码高亮自定义样式 - 浅色主题 */
+.markdown-content .hljs {
+  background: #f8f9fa !important;
+  color: #333;
+}
+
+.markdown-content .hljs-comment,
+.markdown-content .hljs-quote {
+  color: #6a737d;
+  font-style: italic;
+}
+
+.markdown-content .hljs-keyword,
+.markdown-content .hljs-selector-tag,
+.markdown-content .hljs-subst {
+  color: #d73a49;
+}
+
+.markdown-content .hljs-number,
+.markdown-content .hljs-literal,
+.markdown-content .hljs-variable,
+.markdown-content .hljs-template-variable,
+.markdown-content .hljs-tag .hljs-attr {
+  color: #005cc5;
+}
+
+.markdown-content .hljs-string,
+.markdown-content .hljs-doctag {
+  color: #032f62;
+}
+
+.markdown-content .hljs-title,
+.markdown-content .hljs-section,
+.markdown-content .hljs-selector-id {
+  color: #6f42c1;
+}
+
+.markdown-content .hljs-type,
+.markdown-content .hljs-class .hljs-title {
+  color: #22863a;
+}
+
+.markdown-content .hljs-tag,
+.markdown-content .hljs-name,
+.markdown-content .hljs-attribute {
+  color: #6f42c1;
+}
+
+.markdown-content .hljs-regexp,
+.markdown-content .hljs-link {
+  color: #e36209;
+}
+
+.markdown-content .hljs-symbol,
+.markdown-content .hljs-bullet,
+.markdown-content .hljs-built_in,
+.markdown-content .hljs-builtin-name {
+  color: #22863a;
+}
+
+.markdown-content .hljs-meta,
+.markdown-content .hljs-deletion {
+  color: #cb2431;
+}
+
+.markdown-content .hljs-addition,
+.markdown-content .hljs-emphasis,
+.markdown-content .hljs-strong {
+  color: #0969da;
+}
+
+/* 任务列表样式 */
+.markdown-content .task-list-item {
+  list-style: none;
+  margin-left: -1.5em;
+}
+
+.markdown-content .task-list-item input {
+  margin-right: 0.5em;
+}
+
+/* 代码块滚动条样式 */
+.markdown-content code {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e0 #f7fafc;
+}
+
+.markdown-content code::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.markdown-content code::-webkit-scrollbar-track {
+  background: #f7fafc;
+  border-radius: 3px;
+}
+
+.markdown-content code::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 3px;
+}
+
+.markdown-content code::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0;
+}
+
+/* 表格响应式优化 */
+@media (max-width: 640px) {
+  .markdown-content table {
+    font-size: 12px;
+  }
+
+  .markdown-content th,
+  .markdown-content td {
+    padding: 8px;
+  }
+}
+
+/* 复制按钮优化 */
+.markdown-content .copy-button {
+  transition: all 0.2s ease;
+}
+
+/* 行内代码优化 */
+.markdown-content :not(pre) > code {
+  word-break: break-all;
+}
+
+/* 链接优化 */
+.markdown-content a {
+  word-break: break-word;
+}
+
+/* 代码块换行优化 - 区分纯文本和代码 */
+.markdown-content .hljs {
+  /* 仅对代码块应用换行，纯文本保持原样 */
+  word-wrap: break-word;
+}
+
+.markdown-content code:not(:where(.hljs)) {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}

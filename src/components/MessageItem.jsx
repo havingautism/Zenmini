@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Brain, Globe, ChevronDown, Languages, RefreshCw, Copy, Check, Loader2, Volume2, StopCircle } from 'lucide-react'
+import MarkdownRenderer from './MarkdownRenderer'
 
 export default function MessageItem({
   msg,
@@ -47,8 +48,10 @@ export default function MessageItem({
               <Loader2 size={16} className="animate-spin text-gray-400" />
               <span className="text-gray-500">BeeBot 正在思考中...</span>
             </div>
-          ) : (
+          ) : isUser ? (
             <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+          ) : (
+            <MarkdownRenderer content={msg.content} />
           )}
 
           {translatedText && (

@@ -5,6 +5,7 @@ import React, {
   useState,
   useCallback,
 } from "react";
+import "./styles/markdown.css";
 import {
   Bot,
   User,
@@ -188,13 +189,15 @@ export default function App() {
         // 只在没有本地消息且会话不活跃时才加载历史消息
         if (fetched && messages.length === 0 && !isSessionActive) {
           // 映射数据库字段名到前端使用的字段名
-          const mappedMessages = fetched.map(msg => ({
+          const mappedMessages = fetched.map((msg) => ({
             ...msg,
             // 处理思考过程字段映射
             thinkingProcess: msg.thinkingProcess || msg.thinking_process,
             // 处理其他字段映射
-            generatedWithThinking: msg.generatedWithThinking || msg.generated_with_thinking,
-            generatedWithSearch: msg.generatedWithSearch || msg.generated_with_search,
+            generatedWithThinking:
+              msg.generatedWithThinking || msg.generated_with_thinking,
+            generatedWithSearch:
+              msg.generatedWithSearch || msg.generated_with_search,
           }));
 
           setMessages(mappedMessages || []);
@@ -390,12 +393,17 @@ export default function App() {
         // 临时调试日志
         console.log("保存到数据库的消息数据:", {
           hasThinkingProcess: !!messageData.thinkingProcess,
-          thinkingProcessLength: messageData.thinkingProcess ? messageData.thinkingProcess.length : 0,
-          hasSuggestedReplies: messageData.suggestedReplies && messageData.suggestedReplies.length > 0
+          thinkingProcessLength: messageData.thinkingProcess
+            ? messageData.thinkingProcess.length
+            : 0,
+          hasSuggestedReplies:
+            messageData.suggestedReplies &&
+            messageData.suggestedReplies.length > 0,
         });
 
-        addModelMessage(db, appId, userId, currentSessionId, messageData)
-          .catch((e) => console.error("Failed to save model message:", e));
+        addModelMessage(db, appId, userId, currentSessionId, messageData).catch(
+          (e) => console.error("Failed to save model message:", e)
+        );
       }, 200);
 
       // 自动播放TTS
@@ -671,7 +679,7 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen w-full bg-white text-gray-900 overflow-hidden">
+    <div className="flex h-screen w-full bg-white text-gray-900 overflow-hidden text-[90%]">
       {/* 侧边栏 */}
       <div className="flex flex-col w-72 border-r border-gray-100 bg-white h-full">
         <div className="flex items-center p-4 h-18">
@@ -959,14 +967,13 @@ export default function App() {
               <Globe size={14} className="mr-1.5" /> Search
             </button>
 
-            {/* Web Dev */}
-            <button className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-md text-sm hover:bg-gray-200 transition-colors">
+            {/* <button className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-md text-sm hover:bg-gray-200 transition-colors">
               Web Dev
             </button>
-            {/* Deep Research */}
+       
             <button className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-md text-sm hover:bg-gray-200 transition-colors">
               Deep Research
-            </button>
+            </button> */}
           </div>
 
           <form
