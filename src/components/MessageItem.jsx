@@ -75,7 +75,7 @@ export default function MessageItem({
         )}
 
         <div className="px-4 pt-4 pb-4">
-          {msg.isLoading && msg.isError && !msg.content ? (
+          {(msg.isLoading || !msg.isError) && !msg.content ? (
             <div className="flex justify-start">
               <div className="flex items-center space-x-1 px-2">
                 <span

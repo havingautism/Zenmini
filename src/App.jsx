@@ -29,6 +29,7 @@ import {
   SlidersHorizontal,
   ChevronsUpDown,
   Trash2,
+  MoreVertical,
 } from "lucide-react";
 
 import {
@@ -103,6 +104,9 @@ export default function App() {
   const [translations, setTranslations] = useState({});
   const [copiedMessageId, setCopiedMessageId] = useState(null);
   const [isSessionActive, setIsSessionActive] = useState(false);
+  const [sessionMenuId, setSessionMenuId] = useState(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteTargetSession, setDeleteTargetSession] = useState(null);
 
   const messagesEndRef = useRef(null);
 
@@ -272,8 +276,46 @@ export default function App() {
   };
 
   const handleNewChat = () => {
+    setSessionMenuId(null);
     setActiveSessionId(null);
     setMessages([]);
+  };
+
+  const openSessionMenu = (event, sessionId) => {
+    event.stopPropagation();
+    setSessionMenuId((prev) => (prev === sessionId ? null : sessionId));
+  };
+
+  const openDeleteModal = (session) => {
+    setSessionMenuId(null);
+    setDeleteTargetSession(session);
+    setIsDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setDeleteTargetSession(null);
+  };
+
+  const handleConfirmDeleteSession = async () => {
+    if (!deleteTargetSession) return;
+    const db = client;
+    if (!db || !userId) return;
+    const sessionId = deleteTargetSession.id;
+    try {
+      await deleteSession(db, appId, userId, sessionId);
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+      if (activeSessionId === sessionId) {
+        setActiveSessionId(null);
+        setMessages([]);
+        setSuggestedReplies([]);
+        setIsSessionActive(false);
+      }
+    } catch (err) {
+      console.error("Failed to delete session:", err);
+    } finally {
+      closeDeleteModal();
+    }
   };
 
   const formatSessionTime = (dateStr) => {
@@ -353,7 +395,7 @@ export default function App() {
           db,
           appId,
           userId,
-          trimmed.substring(0, 40) + "..."
+          trimmed.substring(0, 50)
         );
         setActiveSessionId(currentSessionId);
       }
@@ -596,7 +638,7 @@ export default function App() {
           db,
           appId,
           userId,
-          trimmed.substring(0, 40) + "..."
+          trimmed.substring(0, 50)
         );
         setActiveSessionId(currentSessionId);
       }
@@ -1098,7 +1140,10 @@ export default function App() {
                             }`}
                           ></span>
                           <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm font-medium">
+                            <div
+                              className="truncate text-sm font-medium"
+                              title={session.title}
+                            >
                               {session.title}
                             </div>
                             <div className="mt-0.5 text-xs text-gray-400">
