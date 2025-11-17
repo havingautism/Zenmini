@@ -69,13 +69,13 @@ export default function MessageItem({
             className={`px-4 pt-2 ${isThinkingVisible ? "block" : "hidden"}`}
           >
             <p className="whitespace-pre-wrap break-words italic text-gray-500 pb-2 border-b border-gray-200">
-              {msg.thinkingProcess}
+              <MarkdownRenderer content={msg.thinkingProcess} />
             </p>
           </div>
         )}
 
         <div className="px-4 pt-4 pb-4">
-          {msg.isLoading && !msg.content ? (
+          {msg.isLoading && msg.isError && !msg.content ? (
             <div className="flex justify-start">
               <div className="flex items-center space-x-1 px-2">
                 <span
@@ -107,7 +107,7 @@ export default function MessageItem({
           {translatedText && (
             <div className="mt-2 pt-2 border-t border-gray-300 border-opacity-50">
               <p className="text-sm italic opacity-80 whitespace-pre-wrap break-words">
-                {translatedText}
+                <MarkdownRenderer content={translatedText} />
               </p>
             </div>
           )}

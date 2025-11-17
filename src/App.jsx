@@ -1,4 +1,4 @@
-import React, {
+﻿import React, {
   useEffect,
   useMemo,
   useRef,
@@ -28,6 +28,7 @@ import {
   Globe,
   SlidersHorizontal,
   ChevronsUpDown,
+  Trash2,
 } from "lucide-react";
 
 import {
@@ -53,6 +54,7 @@ import {
   addUserMessage,
   addModelMessage,
   deleteMessages,
+  deleteSession,
 } from "./services/chat";
 
 import MessageItem from "./components/MessageItem";
@@ -274,6 +276,18 @@ export default function App() {
     setMessages([]);
   };
 
+  const formatSessionTime = (dateStr) => {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toLocaleString("zh-CN", {
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   const handleSelectSession = async (id) => {
     if (id !== activeSessionId) {
       // 先完全清空UI状态和重置活跃标志
@@ -286,6 +300,31 @@ export default function App() {
       setTimeout(() => {
         setActiveSessionId(id);
       }, 50);
+    }
+  };
+
+  const handleDeleteSession = async (e, sessionId) => {
+    e.stopPropagation();
+    const db = client;
+    if (!db || !userId) return;
+    const target = sessions.find((s) => s.id === sessionId);
+    const title = target?.title || "此聊天";
+    const ok = window.confirm(
+      `确定要删除「${title}」的聊天记录吗？该会话下的所有消息都会被清除。`
+    );
+    if (!ok) return;
+
+    try {
+      await deleteSession(db, appId, userId, sessionId);
+      if (activeSessionId === sessionId) {
+        setActiveSessionId(null);
+        setMessages([]);
+        setSuggestedReplies([]);
+        setIsSessionActive(false);
+      }
+    } catch (err) {
+      console.error("Failed to delete session:", err);
+      alert("删除聊天记录失败，请稍后重试。");
     }
   };
 
@@ -923,111 +962,180 @@ export default function App() {
   return (
     <div className="flex h-screen w-full bg-white text-gray-900 overflow-hidden text-[90%]">
       {/* 侧边栏 */}
-      <div className="flex flex-col w-72 border-r border-gray-100 bg-white h-full">
-        <div className="flex items-center p-4 h-18">
-          <Bot size={28} className="text-indigo-600" />
-          <span className="ml-3 font-bold text-xl text-gray-900">BeeBot</span>
+      <div className="flex flex-col w-72 border-r border-gray-100 bg-white text-gray-900 h-full">
+        {/* 顶部 Logo + 标题 */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 h-18">
+          <div className="flex items-center">
+            <Bot size={26} className="text-indigo-500" />
+            <span className="ml-2 font-semibold text-base tracking-wide">
+              BeeBot
+            </span>
+          </div>
         </div>
 
-        <div className="p-4">
+        {/* New Chat */}
+        <div className="px-5 pb-4">
+          <button
+            onClick={handleNewChat}
+            className="flex items-center justify-center w-full rounded-lg bg-indigo-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-400 transition-colors"
+          >
+            <MessageSquarePlus size={20} className="mr-2" />
+            新建对话
+          </button>
+        </div>
+
+        {/* 搜索框 */}
+        <div className="px-5 pb-4">
           <div className="relative flex items-center">
             <Search
               size={18}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 z-10"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10"
             />
             <input
               type="text"
-              placeholder="Search..."
-              className="w-full p-3 pl-10 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner"
+              placeholder="搜索聊天"
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500   
+  focus:border-transparent"
             />
-            <button className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-indigo-600">
+            <button className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-500">
               <SlidersHorizontal size={18} />
             </button>
           </div>
         </div>
 
-        <nav className="flex-col space-y-2 p-4">
-          <a
-            href="#"
-            className="flex items-center p-3 rounded-lg bg-gray-100 text-indigo-600 font-semibold"
-          >
-            <Home size={20} />
-            <span className="ml-3">Home</span>
-          </a>
-          <a
-            href="#"
-            className="flex items-center p-3 rounded-lg hover:bg-gray-100 text-gray-600"
-          >
-            <LayoutGrid size={20} />
-            <span className="ml-3">Explore</span>
-          </a>
-          <a
-            href="#"
-            className="flex items-center p-3 rounded-lg hover:bg-gray-100 text-gray-600"
-          >
-            <Book size={20} />
-            <span className="ml-3">Library</span>
-          </a>
-          <a
-            href="#"
-            className="flex items-center p-3 rounded-lg hover:bg-gray-100 text-gray-600"
-          >
-            <History size={20} />
-            <span className="ml-3">History</span>
-          </a>
-        </nav>
-
-        <nav className="flex-1 overflow-y-auto space-y-2 p-4">
-          <button
-            onClick={handleNewChat}
-            className={`flex items-center justify-center w-full p-3 rounded-lg transition-all font-semibold ${
-              !activeSessionId
-                ? "bg-indigo-600 text-white"
-                : "bg-gray-200 hover:bg-gray-300 text-gray-700"
-            }`}
-          >
-            <MessageSquarePlus size={20} />
-            <span className="ml-3">开始新聊天</span>
-          </button>
-
+        {/* 会话列表 */}
+        <nav className="flex-1 overflow-y-auto space-y-2 px-4 pb-4">
           {isConfigMissing && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-xs">
+            <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
               Supabase 配置缺失！请在设置中填写 Supabase 配置。
             </div>
           )}
 
-          <span className="block text-xs text-gray-500 font-medium px-2 pt-4">
-            聊天记录
-          </span>
-          {sessions.map((session) => (
-            <button
-              key={session.id}
-              onClick={() => handleSelectSession(session.id)}
-              className={`flex items-center w-full p-3 rounded-md transition-colors text-left text-gray-700 ${
-                activeSessionId === session.id
-                  ? "bg-gray-200"
-                  : "hover:bg-gray-200"
-              }`}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  activeSessionId === session.id
-                    ? "bg-indigo-600"
-                    : "bg-transparent"
-                }`}
-              ></span>
-              <span className="ml-3 truncate flex-1">{session.title}</span>
-            </button>
-          ))}
+          <div className="flex items-center justify-between px-1 pb-1">
+            <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              All chats
+            </span>
+            {sessions.length > 0 && (
+              <span className="text-xs text-gray-400">
+                共 {sessions.length} 条
+              </span>
+            )}
+          </div>
+
+          {(() => {
+            if (!sessions || sessions.length === 0) return null;
+
+            const now = new Date();
+            const msPerDay = 1000 * 60 * 60 * 24;
+            const groupsMap = new Map();
+
+            sessions.forEach((s) => {
+              const created = s.created_at ? new Date(s.created_at) : null;
+              let key = "other";
+              let label = "更早";
+              let order = 100;
+              let sortDate = created ? created.getTime() : 0;
+
+              if (created) {
+                const diffDays = (now - created) / msPerDay;
+                if (diffDays <= 7) {
+                  key = "prev7";
+                  label = "Previous 7 days";
+                  order = 0;
+                } else if (diffDays <= 30) {
+                  key = "prev30";
+                  label = "Previous 30 days";
+                  order = 1;
+                } else {
+                  const year = created.getFullYear();
+                  const month = created.getMonth() + 1;
+                  key = `month-${year}-${month}`;
+                  label = `${year} 年 ${month.toString().padStart(2, "0")} 月`;
+                  sortDate = new Date(year, month - 1, 1).getTime();
+                  order = 10;
+                }
+              }
+
+              if (!groupsMap.has(key)) {
+                groupsMap.set(key, {
+                  key,
+                  label,
+                  order,
+                  sortDate,
+                  items: [],
+                });
+              }
+              groupsMap.get(key).items.push(s);
+            });
+
+            const groups = Array.from(groupsMap.values()).sort((a, b) => {
+              if (a.order !== b.order) return a.order - b.order;
+              return b.sortDate - a.sortDate;
+            });
+
+            return groups.map((group) => (
+              <div key={group.label} className="mt-2">
+                <div className="px-2 text-xs font-medium text-gray-500">
+                  {group.label}
+                </div>
+                <div className="mt-1 space-y-1">
+                  {group.items.map((session) => {
+                    const isActive = activeSessionId === session.id;
+                    return (
+                      <button
+                        key={session.id}
+                        onClick={() => handleSelectSession(session.id)}
+                        className={`group relative flex w-full items-center rounded-md px-3 py-2 text-left text-sm transition-colors ${
+                          isActive
+                            ? "bg-indigo-50 text-gray-900"
+                            : "text-gray-800 hover:bg-gray-100"
+                        }`}
+                      >
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                          <span
+                            className={`h-2 w-2 flex-shrink-0 rounded-full ${
+                              isActive ? "bg-indigo-500" : "bg-gray-300"
+                            }`}
+                          ></span>
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm font-medium">
+                              {session.title}
+                            </div>
+                            <div className="mt-0.5 text-xs text-gray-400">
+                              {formatSessionTime(session.created_at)}
+                            </div>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteSession(e, session.id)}
+                          className="ml-2 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500    
+  group-hover:opacity-100"
+                          title="删除此聊天记录"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ));
+          })()}
         </nav>
 
+        {/* 底部用户信息 */}
         <button
           onClick={() => setIsSettingsModalOpen(true)}
-          className="p-4 border-t border-gray-100 hover:bg-gray-100 transition-colors"
+          className="p-4 border-t border-gray-100 hover:bg-gray-50 transition-colors"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <User size={24} className="p-1 bg-gray-300 rounded-full" />
+              <User
+                size={24}
+                className="p-1 bg-gray-200 text-gray-700 rounded-full"
+              />
               {userId && (
                 <span
                   className="ml-3 text-sm font-medium truncate text-gray-800"

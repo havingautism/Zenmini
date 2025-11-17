@@ -127,5 +127,22 @@ async function deleteMessagesSB(supabase, appId, clientId, sessionId, ids) {
   if (error) throw error
 }
 
+async function deleteSessionSB(supabase, appId, clientId, sessionId) {
+  // 先删除该会话下的所有消息，再删除会话本身
+  const { error: msgError } = await supabase.from('messages').delete().eq('session_id', sessionId)
+  if (msgError) throw msgError
+
+  const { error: sessionError } = await supabase.from('chat_sessions').delete().eq('id', sessionId)
+  if (sessionError) throw sessionError
+}
+
 // --- Unified exports ---
-export { subscribeSessionsSB as subscribeSessions, subscribeMessagesSB as subscribeMessages, createSessionSB as createSession, addUserMessageSB as addUserMessage, addModelMessageSB as addModelMessage, deleteMessagesSB as deleteMessages }
+export {
+  subscribeSessionsSB as subscribeSessions,
+  subscribeMessagesSB as subscribeMessages,
+  createSessionSB as createSession,
+  addUserMessageSB as addUserMessage,
+  addModelMessageSB as addModelMessage,
+  deleteMessagesSB as deleteMessages,
+  deleteSessionSB as deleteSession,
+}
