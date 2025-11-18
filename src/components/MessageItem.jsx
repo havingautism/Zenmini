@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Brain,
   Globe,
@@ -12,6 +12,13 @@ import {
   StopCircle,
 } from "lucide-react";
 import MarkdownRenderer from "./MarkdownRenderer";
+
+const THINKING_PHASES = [
+  "正在深度思考你的问题…",
+  "正在梳理思路和计划…",
+  "正在检索和比对相关信息…",
+  "正在组织清晰易懂的回答…",
+];
 
 export default function MessageItem({
   msg,
@@ -33,6 +40,27 @@ export default function MessageItem({
   const isUser = msg.role === "user";
   const areSourcesVisible = expandedSourcesMessageId === msg.id;
   const [isThinkingVisible, setIsThinkingVisible] = useState(false);
+  const [thinkingPhaseIndex, setThinkingPhaseIndex] = useState(0);
+
+  const isLoadingBubble = !isUser && msg.isLoading && !msg.content;
+  const isThinkingLoading =
+    isLoadingBubble && Boolean(msg.generatedWithThinking);
+
+  useEffect(() => {
+    if (!isThinkingLoading) return;
+
+    const timer = setInterval(
+      () =>
+        setThinkingPhaseIndex(
+          (prev) => (prev + 1) % THINKING_PHASES.length
+        ),
+      1600
+    );
+
+    return () => clearInterval(timer);
+  }, [isThinkingLoading]);
+
+  const botBubbleClass = "bg-white text-gray-800 rounded-xl rounded-bl-none border border-gray-200";
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
@@ -40,14 +68,14 @@ export default function MessageItem({
         className={`flex flex-col max-w-xl shadow-md ${
           isUser
             ? "bg-indigo-600 text-white rounded-xl rounded-br-none"
-            : "bg-white text-gray-800 rounded-xl rounded-bl-none border border-gray-200"
+            : botBubbleClass
         }`}
       >
         {msg.thinkingProcess && (
           <button
             onClick={() => setIsThinkingVisible((prev) => !prev)}
             className={`flex items-center text-xs font-semibold w-full p-2 text-left ${
-              isUser ? "text-indigo-2 00" : "text-indigo-600"
+              isUser ? "text-indigo-200" : "text-indigo-600"
             } ${
               isThinkingVisible
                 ? "bg-gray-50 rounded-t-xl"
@@ -75,29 +103,49 @@ export default function MessageItem({
         )}
 
         <div className="px-4 pt-4 pb-4">
-          {(msg.isLoading || !msg.isError) && !msg.content ? (
-            <div className="flex justify-start">
-              <div className="flex items-center space-x-1 px-2">
-                <span
-                  className="animate-bounce"
-                  style={{ animationDelay: "0s" }}
-                >
-                  .
+          {isLoadingBubble ? (
+            isThinkingLoading ? (
+              <div className="flex flex-col space-y-1">
+                <span className="text-xs font-medium tracking-wide text-indigo-500">
+                  BeeBot 正在深度思考
                 </span>
-                <span
-                  className="animate-bounce"
-                  style={{ animationDelay: "0.2s" }}
-                >
-                  .
+                <span className="text-sm text-gray-700">
+                  {THINKING_PHASES[thinkingPhaseIndex]}
                 </span>
-                <span
-                  className="animate-bounce"
-                  style={{ animationDelay: "0.4s" }}
-                >
-                  .
-                </span>
+                <div className="mt-1 flex items-center space-x-1">
+                  <span
+                    className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce"
+                    style={{ animationDelay: "0s" }}
+                  />
+                  <span
+                    className="w-1.5 h-1.5 rounded-full bg-indigo-300 animate-bounce"
+                    style={{ animationDelay: "0.2s" }}
+                  />
+                  <span
+                    className="w-1.5 h-1.5 rounded-full bg-indigo-200 animate-bounce"
+                    style={{ animationDelay: "0.4s" }}
+                  />
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-center space-x-2 text-xs text-gray-500">
+                <span>BeeBot 正在生成回答</span>
+                <div className="flex items-center space-x-0.5">
+                  <span
+                    className="w-1 h-1 rounded-full bg-gray-400 animate-bounce"
+                    style={{ animationDelay: "0s" }}
+                  />
+                  <span
+                    className="w-1 h-1 rounded-full bg-gray-300 animate-bounce"
+                    style={{ animationDelay: "0.2s" }}
+                  />
+                  <span
+                    className="w-1 h-1 rounded-full bg-gray-200 animate-bounce"
+                    style={{ animationDelay: "0.4s" }}
+                  />
+                </div>
+              </div>
+            )
           ) : isUser ? (
             <p className="whitespace-pre-wrap break-words">{msg.content}</p>
           ) : (
@@ -117,12 +165,14 @@ export default function MessageItem({
               <button
                 className="flex justify-between items-center w-full text-xs font-semibold mb-1 opacity-80"
                 onClick={() =>
-                  setExpandedSourcesMessageId(areSourcesVisible ? null : msg.id)
+                  setExpandedSourcesMessageId(
+                    areSourcesVisible ? null : msg.id
+                  )
                 }
               >
                 <span className="flex items-center">
                   <Globe size={14} className="mr-1" />
-                  参考来源 ({msg.sources.length})
+                  参考来源({msg.sources.length})
                 </span>
                 <ChevronDown
                   size={16}
@@ -235,7 +285,7 @@ export default function MessageItem({
                 <button
                   onClick={() => onTranslate(msg)}
                   className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
-                  title={translatedText ? "隐藏翻译" : "翻译 (中/英)"}
+                  title={translatedText ? "隐藏翻译" : "翻译"}
                 >
                   <Languages size={16} />
                 </button>

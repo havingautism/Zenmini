@@ -104,6 +104,7 @@ export default function App() {
   const [translations, setTranslations] = useState({});
   const [copiedMessageId, setCopiedMessageId] = useState(null);
   const [isSessionActive, setIsSessionActive] = useState(false);
+  const [isSessionLoading, setIsSessionLoading] = useState(false);
   const [sessionMenuId, setSessionMenuId] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteTargetSession, setDeleteTargetSession] = useState(null);
@@ -180,6 +181,7 @@ export default function App() {
       const db = client;
       if (!db || !userId || !sessionId || isSessionActive) return;
 
+      setIsSessionLoading(true);
       try {
         const { data: fetched, error } = await db
           .from("messages")
@@ -229,6 +231,8 @@ export default function App() {
         }
       } catch (e) {
         console.error("Failed to load history messages:", e);
+      } finally {
+        setIsSessionLoading(false);
       }
     },
     [client, userId, messages.length, isSessionActive]
@@ -275,10 +279,41 @@ export default function App() {
     }
   };
 
-  const handleNewChat = () => {
+  const handleNewChat = async () => {
     setSessionMenuId(null);
     setActiveSessionId(null);
     setMessages([]);
+    setSuggestedReplies([]);
+    setIsSessionActive(false);
+
+    // Do not create session here; create on first message
+    return;
+
+    const db = client;
+    if (!db || !userId) return;
+
+    try {
+      const createdAt = new Date().toISOString();
+      const title = "新会话";
+      const newSessionId = await createSession(db, appId, userId, title);
+      setActiveSessionId(newSessionId);
+      // 页面优先：本地先插入一条新会话，后续由订阅同步为准
+      setSessions((prev) => {
+        if (prev.some((s) => s.id === newSessionId)) return prev;
+        return [
+          {
+            id: newSessionId,
+            title,
+            created_at: createdAt,
+            app_id: appId,
+            client_id: userId,
+          },
+          ...prev,
+        ];
+      });
+    } catch (e) {
+      console.error("Failed to create new chat session:", e);
+    }
   };
 
   const openSessionMenu = (event, sessionId) => {
@@ -358,6 +393,8 @@ export default function App() {
 
     try {
       await deleteSession(db, appId, userId, sessionId);
+      // 页面优先：立即从列表中移除该会话
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
       if (activeSessionId === sessionId) {
         setActiveSessionId(null);
         setMessages([]);
@@ -370,7 +407,8 @@ export default function App() {
     }
   };
 
-  const submitMessage = async (messageContent) => {
+  const submitMessage = async (messageContent, options = {}) => {
+    const { suppressThinkingBubble = false } = options;
     const db = client;
     const trimmed = messageContent.trim();
     if (!trimmed || isLoading || !userId || !db) return;
@@ -391,13 +429,29 @@ export default function App() {
     try {
       let currentSessionId = activeSessionId;
       if (!currentSessionId) {
+        const sessionTitle = trimmed.substring(0, 50);
+        const createdAt = new Date().toISOString();
         currentSessionId = await createSession(
           db,
           appId,
           userId,
-          trimmed.substring(0, 50)
+          sessionTitle
         );
         setActiveSessionId(currentSessionId);
+        // 页面优先：本地先插入会话，后续由订阅同步为准
+        setSessions((prev) => {
+          if (prev.some((s) => s.id === currentSessionId)) return prev;
+          return [
+            {
+              id: currentSessionId,
+              title: sessionTitle || "新会话",
+              created_at: createdAt,
+              app_id: appId,
+              client_id: userId,
+            },
+            ...prev,
+          ];
+        });
       }
 
       // 不在流式生成过程中写入数据库，等待完整响应后再统一写入
@@ -423,7 +477,7 @@ export default function App() {
           isLoading: true,
           thinkingProcess: null,
           sources: [],
-          generatedWithThinking: isThinkingMode,
+          generatedWithThinking: isThinkingMode && !suppressThinkingBubble,
           generatedWithSearch: isSearchMode,
           created_at: modelCreatedAt,
         },
@@ -783,7 +837,8 @@ export default function App() {
   };
 
   const handleSuggestedReplyClick = async (reply) => {
-    await submitMessage(reply);
+    // 延伸问题：仍然可以用思考模式，但不显示“深度思考”加载气泡
+    await submitMessage(reply, { suppressThinkingBubble: true });
   };
 
   const handleSummarizeChat = async () => {
@@ -1237,6 +1292,16 @@ export default function App() {
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
+            {isSessionLoading && messages.length === 0 && (
+              <div className="w-full flex items-center justify-center py-10">
+                <div className="flex flex-col items-center">
+                  <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
+                  <p className="mt-3 text-sm text-gray-500">
+                    正在加载此会话的历史对话…
+                  </p>
+                </div>
+              </div>
+            )}
             {(() => {
               const lastModelMessageIndex = [...messages].findLastIndex(
                 (m) => m.role === "model"
