@@ -367,16 +367,12 @@ export default function App() {
 
   const handleSelectSession = async (id) => {
     if (id !== activeSessionId) {
-      // 先完全清空UI状态和重置活跃标志
-      setActiveSessionId(null);
+      // 切换会话时清空当前 UI，并展示加载态
       setIsSessionActive(false);
       setMessages([]);
       setSuggestedReplies([]);
-
-      // 短暂延迟确保状态清空，然后设置新会话
-      setTimeout(() => {
-        setActiveSessionId(id);
-      }, 50);
+      setIsSessionLoading(true);
+      setActiveSessionId(id);
     }
   };
 
@@ -1251,7 +1247,16 @@ export default function App() {
       </div>
 
       {/* 主窗格 */}
-      <div className="flex-1 flex flex-col h-full bg-white">
+      <div className="flex-1 flex flex-col h-full bg-white relative">
+        {isSessionLoading && activeSessionId && (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
+            <div className="w-14 h-14 rounded-full bg-indigo-50 flex items-center justify-center shadow-sm">
+              <Loader2 className="w-7 h-7 text-indigo-500 animate-spin" />
+            </div>
+            <p className="mt-4 text-sm text-gray-600">正在切换会话…</p>
+            <p className="mt-1 text-xs text-gray-400">为你载入历史对话</p>
+          </div>
+        )}
         <div className="flex items-center justify-between p-4 h-18 border-b border-gray-100">
           <h2 className="text-xl font-semibold">
             {activeSessionId
@@ -1292,16 +1297,6 @@ export default function App() {
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
-            {isSessionLoading && messages.length === 0 && (
-              <div className="w-full flex items-center justify-center py-10">
-                <div className="flex flex-col items-center">
-                  <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
-                  <p className="mt-3 text-sm text-gray-500">
-                    正在加载此会话的历史对话…
-                  </p>
-                </div>
-              </div>
-            )}
             {(() => {
               const lastModelMessageIndex = [...messages].findLastIndex(
                 (m) => m.role === "model"
