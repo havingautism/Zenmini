@@ -68,13 +68,21 @@ async function createSessionSB(supabase, appId, clientId, title) {
   return data.id
 }
 
-async function addUserMessageSB(supabase, appId, clientId, sessionId, content) {
-  const { error } = await supabase.from('messages').insert([{ session_id: sessionId, role: 'user', content }])
+async function addUserMessageSB(supabase, appId, clientId, sessionId, content, createdAt) {
+  const payload = {
+    session_id: sessionId,
+    role: 'user',
+    content,
+  }
+  if (createdAt) {
+    payload.created_at = createdAt
+  }
+  const { error } = await supabase.from('messages').insert([payload])
   if (error) throw error
 }
 
 async function addModelMessageSB(supabase, appId, clientId, sessionId, payload) {
-  const { content, thinkingProcess, sources, suggestedReplies, generatedWithThinking, generatedWithSearch } = payload
+  const { content, thinkingProcess, sources, suggestedReplies, generatedWithThinking, generatedWithSearch, createdAt } = payload
 
   // 尝试包含 suggested_replies 字段
   const messageData = {
@@ -85,6 +93,9 @@ async function addModelMessageSB(supabase, appId, clientId, sessionId, payload) 
     sources: sources || [],
     generated_with_thinking: !!generatedWithThinking,
     generated_with_search: !!generatedWithSearch,
+  }
+  if (createdAt) {
+    messageData.created_at = createdAt
   }
 
   // 只有在提供了 suggestedReplies 时才添加该字段

@@ -411,31 +411,9 @@ export default function App() {
     }
   };
 
-  const handleDeleteSession = async (e, sessionId) => {
+  const handleDeleteSession = (e, session) => {
     e.stopPropagation();
-    const db = client;
-    if (!db || !userId) return;
-    const target = sessions.find((s) => s.id === sessionId);
-    const title = target?.title || "此聊天";
-    const ok = window.confirm(
-      `确定要删除「${title}」的聊天记录吗？该会话下的所有消息都会被清除。`
-    );
-    if (!ok) return;
-
-    try {
-      await deleteSession(db, appId, userId, sessionId);
-      // 页面优先：立即从列表中移除该会话
-      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
-      if (activeSessionId === sessionId) {
-        setActiveSessionId(null);
-        setMessages([]);
-        setSuggestedReplies([]);
-        setIsSessionActive(false);
-      }
-    } catch (err) {
-      console.error("Failed to delete session:", err);
-      alert("删除聊天记录失败，请稍后重试。");
-    }
+    openDeleteModal(session);
   };
 
   const submitMessage = async (messageContent, options = {}) => {
@@ -457,17 +435,15 @@ export default function App() {
     };
     setMessages((prev) => [...prev, userMessage]);
 
+    let modelMessageId = null;
+    let modelCreatedAt = null;
+
     try {
       let currentSessionId = activeSessionId;
       if (!currentSessionId) {
         const sessionTitle = trimmed.substring(0, 50);
         const createdAt = new Date().toISOString();
-        currentSessionId = await createSession(
-          db,
-          appId,
-          userId,
-          sessionTitle
-        );
+        currentSessionId = await createSession(db, appId, userId, sessionTitle);
         setActiveSessionId(currentSessionId);
         // 页面优先：本地先插入会话，后续由订阅同步为准
         setSessions((prev) => {
@@ -497,8 +473,8 @@ export default function App() {
 
       const modelToUse = selectedModel;
 
-      const modelMessageId = `model-${Date.now()}`;
-      const modelCreatedAt = new Date().toISOString();
+      modelMessageId = `model-${Date.now()}`;
+      modelCreatedAt = new Date().toISOString();
       setMessages((prev) => [
         ...prev,
         {
@@ -633,9 +609,14 @@ export default function App() {
 
       setTimeout(() => {
         // 在完成整个流式响应后，再统一持久化用户消息和模型消息
-        addUserMessage(db, appId, userId, currentSessionId, trimmed).catch(
-          (e) => console.error("Failed to save user message:", e)
-        );
+        addUserMessage(
+          db,
+          appId,
+          userId,
+          currentSessionId,
+          trimmed,
+          userMessage.created_at
+        ).catch((e) => console.error("Failed to save user message:", e));
 
         const messageData = {
           content: fullText,
@@ -683,15 +664,19 @@ export default function App() {
       }
     } catch (error) {
       console.error("Error sending message:", error);
-      setMessages((prev) => [
-        ...prev.filter((msg) => msg.id !== userMessage.id),
-        {
-          id: `error-${Date.now()}`,
-          role: "model",
-          content: "抱歉，发送消息时出错，请重试。",
-          created_at: new Date().toISOString(),
-        },
-      ]);
+      setMessages((prev) => {
+        // 移除正在加载的模型占位气泡，保留用户消息
+        const cleaned = prev.filter((msg) => msg.id !== modelMessageId);
+        return [
+          ...cleaned,
+          {
+            id: `error-${Date.now()}`,
+            role: "model",
+            content: "抱歉，发送消息时出错，请重试。",
+            created_at: new Date().toISOString(),
+          },
+        ];
+      });
     } finally {
       setIsLoading(false);
     }
@@ -730,9 +715,14 @@ export default function App() {
 
       // 后台异步保存用户消息到数据库（完全不阻塞UI）
       setTimeout(() => {
-        addUserMessage(db, appId, userId, currentSessionId, trimmed).catch(
-          (e) => console.error("Failed to save user message:", e)
-        );
+        addUserMessage(
+          db,
+          appId,
+          userId,
+          currentSessionId,
+          trimmed,
+          userMessage.created_at
+        ).catch((e) => console.error("Failed to save user message:", e));
       }, 100);
 
       // 构建API调用历史（使用最新的消息状态）
@@ -796,6 +786,7 @@ export default function App() {
           suggestedReplies,
           generatedWithThinking: !!aiResponse.thinkingProcess,
           generatedWithSearch: isSearchMode,
+          createdAt: modelMessage.created_at,
         };
 
         // 临时调试日志
@@ -1042,6 +1033,7 @@ export default function App() {
         sources: aiResponse.sources || [],
         generatedWithThinking: !!thinkingProcess,
         generatedWithSearch: isSearchMode,
+        createdAt: new Date().toISOString(),
       });
 
       const finalHistoryForReplies = [
@@ -1240,7 +1232,7 @@ export default function App() {
 
                         <button
                           type="button"
-                          onClick={(e) => handleDeleteSession(e, session.id)}
+                          onClick={(e) => handleDeleteSession(e, session)}
                           className="ml-2 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500    
   group-hover:opacity-100"
                           title="删除此聊天记录"
@@ -1408,10 +1400,12 @@ export default function App() {
                     <File size={16} className="mr-2 text-indigo-500" /> 上传文档
                   </button>
                   <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                    <Image size={16} className="mr-2 text-indigo-500" /> 上传图片
+                    <Image size={16} className="mr-2 text-indigo-500" />{" "}
+                    上传图片
                   </button>
                   <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                    <Video size={16} className="mr-2 text-indigo-500" /> 上传视频
+                    <Video size={16} className="mr-2 text-indigo-500" />{" "}
+                    上传视频
                   </button>
                   <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors rounded-b-xl">
                     <Mic size={16} className="mr-2 text-indigo-500" /> 上传音频
@@ -1613,6 +1607,48 @@ export default function App() {
             setNeedsSchemaInit(false);
           }}
         />
+      )}
+      {isDeleteModalOpen && deleteTargetSession && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6">
+            <div className="flex items-center mb-4">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-50 text-red-500 mr-3">
+                <Trash2 size={18} />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">
+                  确认删除聊天
+                </h3>
+                <p className="mt-1 text-xs text-gray-500">
+                  此操作无法撤销，将删除该会话下的所有消息。
+                </p>
+              </div>
+            </div>
+            <div className="mb-5 text-sm text-gray-700">
+              确定要删除「
+              <span className="font-medium">
+                {deleteTargetSession.title || "此聊天"}
+              </span>
+              」的聊天记录吗？
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeDeleteModal}
+                className="px-4 py-2 rounded-lg text-sm border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteSession}
+                className="px-4 py-2 rounded-lg text-sm bg-red-500 text-white hover:bg-red-600 transition-colors"
+              >
+                删除
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
