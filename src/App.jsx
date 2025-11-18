@@ -31,7 +31,7 @@ import {
   Trash2,
   MoreVertical,
 } from "lucide-react";
-
+import MarkdownRenderer from "./components/MarkdownRenderer";
 import {
   callGeminiApi,
   callGeminiForStructuredJson,
@@ -57,11 +57,12 @@ import {
   deleteMessages,
   deleteSession,
 } from "./services/chat";
-
+import GeminiLogo from "./svgs/Google-gemini-icon.svg";
 import MessageItem from "./components/MessageItem";
 import SummaryModal from "./components/SummaryModal";
 import SettingsModal from "./components/SettingsModal";
 import SchemaInitModal from "./components/SchemaInitModal";
+import SuggestedReplyMarkdown from "./components/SuggestedReplyMarkdown";
 
 export default function App() {
   const [client, setClient] = useState(null);
@@ -859,8 +860,8 @@ export default function App() {
   };
 
   const handleSuggestedReplyClick = async (reply) => {
-    // 延伸问题：仍然可以用思考模式，但不显示“深度思考”加载气泡
-    await submitMessage(reply, { suppressThinkingBubble: true });
+    // 延伸问题：沿用当前思考模式设置，并显示对应的加载气泡
+    await submitMessage(reply);
   };
 
   const handleSummarizeChat = async () => {
@@ -1373,9 +1374,9 @@ export default function App() {
                   <button
                     key={index}
                     onClick={() => handleSuggestedReplyClick(reply)}
-                    className="px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full text-xs hover:bg-indigo-100 hover:border-indigo-200 transition-colors"
+                    className="px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full text-xs hover:bg-indigo-100 hover:border-indigo-200 transition-colors max-w-full"
                   >
-                    {reply}
+                    <SuggestedReplyMarkdown content={reply} />
                   </button>
                 ))}
               </div>
@@ -1421,8 +1422,12 @@ export default function App() {
                 onClick={() => setIsModelMenuOpen((p) => !p)}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-sm font-medium text-gray-800 shadow-sm border border-gray-200 transition-colors"
               >
-                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-gradient-to-tr from-indigo-500 via-sky-500 to-teal-400 text-white text-[10px] font-bold">
-                  G
+                <span className="flex items-center justify-center w-5 h-5 rounded-full ">
+                  <img
+                    src={GeminiLogo}
+                    alt="Google Gemini"
+                    className="w-4 h-4"
+                  />
                 </span>
                 <span className="whitespace-nowrap">
                   {selectedModel === "gemini-2.5-flash"
@@ -1434,8 +1439,12 @@ export default function App() {
               {isModelMenuOpen && (
                 <div className="absolute bottom-full left-0 mb-2 w-56 bg-white border border-gray-200 rounded-xl shadow-xl z-20">
                   <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
-                    <span className="flex items-center justify-center w-5 h-5 rounded-full bg-gradient-to-tr from-indigo-500 via-sky-500 to-teal-400 text-white text-[10px] font-bold">
-                      G
+                    <span className="flex items-center justify-center w-5 h-5 rounded-full ">
+                      <img
+                        src="https://commons.wikimedia.org/wiki/Special:FilePath/Google-gemini-icon.svg"
+                        alt="Google Gemini"
+                        className="w-4 h-4"
+                      />
                     </span>
                     <span className="text-xs font-semibold text-gray-600">
                       Gemini 模型
