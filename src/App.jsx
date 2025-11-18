@@ -1365,33 +1365,31 @@ export default function App() {
               ));
             })()}
 
-            {suggestedReplies.length > 0 && (
-              <div className="flex justify-start mb-4">
-                <div className="flex flex-col max-w-xl w-full">
-                  <span className="text-sm font-semibold text-indigo-600 mb-2 px-1">
-                    <Sparkles size={16} className="inline mr-1" />
-                    延伸问题:
-                  </span>
-                  <div className="flex flex-wrap gap-2">
-                    {suggestedReplies.map((reply, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleSuggestedReplyClick(reply)}
-                        className="px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full text-sm hover:bg-indigo-100 transition-colors"
-                      >
-                        {reply}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
             <div ref={messagesEndRef} />
           </div>
         )}
 
         <div className="p-4 border-t border-gray-100 bg-white">
+          {suggestedReplies.length > 0 && (
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-indigo-600 flex items-center">
+                <Sparkles size={14} className="mr-1" />
+                延伸问题
+              </span>
+              <div className="flex flex-wrap gap-2 flex-1">
+                {suggestedReplies.map((reply, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleSuggestedReplyClick(reply)}
+                    className="px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full text-xs hover:bg-indigo-100 hover:border-indigo-200 transition-colors"
+                  >
+                    {reply}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-wrap items-center gap-2 mb-3">
             <div className="relative" ref={uploadMenuRef}>
               <button

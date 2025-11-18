@@ -65,12 +65,12 @@ export default function MessageItem({
   return (
     <div className="flex justify-center">
       <div
-        className={`flex w-full max-w-3xl px-4 ${
+        className={`flex w-full max-w-4xl px-4 ${
           isUser ? "justify-end" : "justify-start"
         }`}
       >
         <div
-          className={`flex flex-col max-w-[72%] shadow-md ${
+          className={`flex flex-col max-w-[68%] shadow-md ${
             isUser
               ? "bg-indigo-600 text-white rounded-xl rounded-br-none"
               : botBubbleClass
