@@ -63,14 +63,19 @@ export default function MessageItem({
   const botBubbleClass = "bg-white text-gray-800 rounded-xl rounded-bl-none border border-gray-200";
 
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+    <div className="flex justify-center">
       <div
-        className={`flex flex-col max-w-xl shadow-md ${
-          isUser
-            ? "bg-indigo-600 text-white rounded-xl rounded-br-none"
-            : botBubbleClass
+        className={`flex w-full max-w-3xl px-4 ${
+          isUser ? "justify-end" : "justify-start"
         }`}
       >
+        <div
+          className={`flex flex-col max-w-[72%] shadow-md ${
+            isUser
+              ? "bg-indigo-600 text-white rounded-xl rounded-br-none"
+              : botBubbleClass
+          }`}
+        >
         {msg.thinkingProcess && (
           <button
             onClick={() => setIsThinkingVisible((prev) => !prev)}
@@ -293,6 +298,7 @@ export default function MessageItem({
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

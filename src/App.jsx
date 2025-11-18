@@ -90,6 +90,7 @@ export default function App() {
   const [isThinkingMode, setIsThinkingMode] = useState(true);
   const [isSearchMode, setIsSearchMode] = useState(true);
   const [isUploadMenuOpen, setIsUploadMenuOpen] = useState(false);
+  const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
 
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [userApiKey, setUserApiKey] = useState("");
@@ -110,6 +111,8 @@ export default function App() {
   const [deleteTargetSession, setDeleteTargetSession] = useState(null);
 
   const messagesEndRef = useRef(null);
+  const uploadMenuRef = useRef(null);
+  const modelMenuRef = useRef(null);
 
   // 初始化 Supabase
   const initApp = async (cid) => {
@@ -139,6 +142,38 @@ export default function App() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, suggestedReplies, isLoading]);
+
+  useEffect(() => {
+    if (!isUploadMenuOpen) return;
+    const handleClickOutside = (event) => {
+      if (
+        uploadMenuRef.current &&
+        !uploadMenuRef.current.contains(event.target)
+      ) {
+        setIsUploadMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isUploadMenuOpen]);
+
+  useEffect(() => {
+    if (!isModelMenuOpen) return;
+    const handleClickOutside = (event) => {
+      if (
+        modelMenuRef.current &&
+        !modelMenuRef.current.contains(event.target)
+      ) {
+        setIsModelMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isModelMenuOpen]);
 
   useEffect(() => {
     try {
@@ -1358,46 +1393,112 @@ export default function App() {
 
         <div className="p-4 border-t border-gray-100 bg-white">
           <div className="flex flex-wrap items-center gap-2 mb-3">
-            <div className="relative">
+            <div className="relative" ref={uploadMenuRef}>
               <button
                 onClick={() => setIsUploadMenuOpen((p) => !p)}
-                className="flex items-center p-2 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+                className="flex items-center p-2 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors shadow-sm"
                 title="上传文件 (暂不可用)"
               >
-                <Plus size={16} />
+                <Plus size={16} className="text-gray-700" />
               </button>
               {isUploadMenuOpen && (
-                <div className="absolute bottom-full left-0 mb-2 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-10">
-                  <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">
-                    <File size={16} className="mr-2" /> Upload Document
+                <div className="absolute bottom-full left-0 mb-2 w-52 bg-white border border-gray-200 rounded-xl shadow-xl z-20">
+                  <div className="px-3 py-2 border-b border-gray-100 text-xs font-semibold text-gray-500">
+                    上传（开发中）
+                  </div>
+                  <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                    <File size={16} className="mr-2 text-indigo-500" /> 上传文档
                   </button>
-                  <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">
-                    <Image size={16} className="mr-2" /> Upload Image
+                  <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                    <Image size={16} className="mr-2 text-indigo-500" /> 上传图片
                   </button>
-                  <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">
-                    <Video size={16} className="mr-2" /> Upload Video
+                  <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                    <Video size={16} className="mr-2 text-indigo-500" /> 上传视频
                   </button>
-                  <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">
-                    <Mic size={16} className="mr-2" /> Upload Audio
+                  <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors rounded-b-xl">
+                    <Mic size={16} className="mr-2 text-indigo-500" /> 上传音频
                   </button>
                 </div>
               )}
             </div>
 
             {/* 模型选择器 */}
-            <div className="relative">
-              <select
-                value={selectedModel}
-                onChange={(e) => setSelectedModel(e.target.value)}
-                className="appearance-none bg-white border border-gray-300 rounded-md px-3 py-1.5 pr-8 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            <div className="relative" ref={modelMenuRef}>
+              <button
+                type="button"
+                onClick={() => setIsModelMenuOpen((p) => !p)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-sm font-medium text-gray-800 shadow-sm border border-gray-200 transition-colors"
               >
-                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-              </select>
-              <ChevronsUpDown
-                size={14}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
-              />
+                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-gradient-to-tr from-indigo-500 via-sky-500 to-teal-400 text-white text-[10px] font-bold">
+                  G
+                </span>
+                <span className="whitespace-nowrap">
+                  {selectedModel === "gemini-2.5-flash"
+                    ? "Gemini 2.5 Flash"
+                    : "Gemini 2.5 Pro"}
+                </span>
+                <ChevronsUpDown size={14} className="text-gray-400" />
+              </button>
+              {isModelMenuOpen && (
+                <div className="absolute bottom-full left-0 mb-2 w-56 bg-white border border-gray-200 rounded-xl shadow-xl z-20">
+                  <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
+                    <span className="flex items-center justify-center w-5 h-5 rounded-full bg-gradient-to-tr from-indigo-500 via-sky-500 to-teal-400 text-white text-[10px] font-bold">
+                      G
+                    </span>
+                    <span className="text-xs font-semibold text-gray-600">
+                      Gemini 模型
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedModel("gemini-2.5-flash");
+                      setIsModelMenuOpen(false);
+                    }}
+                    className={`w-full px-3 py-2 text-left text-sm flex items-center justify-between hover:bg-indigo-50 transition-colors ${
+                      selectedModel === "gemini-2.5-flash"
+                        ? "text-indigo-700 bg-indigo-50"
+                        : "text-gray-700"
+                    }`}
+                  >
+                    <div>
+                      <div className="font-medium">Gemini 2.5 Flash</div>
+                      <div className="text-xs text-gray-400">
+                        快速响应，适合日常对话
+                      </div>
+                    </div>
+                    {selectedModel === "gemini-2.5-flash" && (
+                      <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600">
+                        当前
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedModel("gemini-2.5-pro");
+                      setIsModelMenuOpen(false);
+                    }}
+                    className={`w-full px-3 py-2 text-left text-sm flex items-center justify-between hover:bg-indigo-50 transition-colors rounded-b-xl ${
+                      selectedModel === "gemini-2.5-pro"
+                        ? "text-indigo-700 bg-indigo-50"
+                        : "text-gray-700"
+                    }`}
+                  >
+                    <div>
+                      <div className="font-medium">Gemini 2.5 Pro</div>
+                      <div className="text-xs text-gray-400">
+                        更强推理，适合复杂任务
+                      </div>
+                    </div>
+                    {selectedModel === "gemini-2.5-pro" && (
+                      <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600">
+                        当前
+                      </span>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Thinking按钮 */}
