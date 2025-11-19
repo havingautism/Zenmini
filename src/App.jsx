@@ -995,6 +995,11 @@ export default function App() {
     if (isLoading || !userId || !activeSessionId || !db) return;
     setIsLoading(true);
     setSuggestedReplies([]);
+    setIsSessionActive(true);
+
+    let modelMessageId = null;
+    let modelCreatedAt = null;
+
     try {
       const lastUserMessageIndex = [...messages].findLastIndex(
         (m) => m.role === "user"
@@ -1004,9 +1009,32 @@ export default function App() {
         return;
       }
 
-      const historyForApi = messages
-        .slice(0, lastUserMessageIndex + 1)
-        .map((msg) => ({ role: msg.role, parts: [{ text: msg.content }] }));
+      // 仅保留最后一条用户消息之前的历史消息（包含该条用户消息）
+      const baseMessages = messages.slice(0, lastUserMessageIndex + 1);
+
+      // 删除本地 UI 中最后一条用户消息之后的所有模型回复
+      modelMessageId = `model-${Date.now()}`;
+      modelCreatedAt = new Date().toISOString();
+      setMessages([
+        ...baseMessages,
+        {
+          id: modelMessageId,
+          role: "model",
+          content: "",
+          isLoading: true,
+          thinkingProcess: null,
+          sources: [],
+          generatedWithThinking: isThinkingMode,
+          generatedWithSearch: isSearchMode,
+          created_at: modelCreatedAt,
+        },
+      ]);
+
+      const historyForApi = baseMessages.map((msg) => ({
+        role: msg.role,
+        parts: [{ text: msg.content }],
+      }));
+
       const messagesToDelete = messages.slice(lastUserMessageIndex + 1);
       await deleteMessages(
         db,
@@ -1028,13 +1056,32 @@ export default function App() {
       const thinkingProcess = aiResponse.thinkingProcess;
       const finalAnswer = aiResponse.text;
 
+      const finalSources = aiResponse.sources || [];
+
+      // 更新本地占位气泡为最终结果
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === modelMessageId
+            ? {
+                ...m,
+                content: finalAnswer,
+                thinkingProcess,
+                sources: finalSources,
+                generatedWithThinking: !!thinkingProcess,
+                generatedWithSearch: isSearchMode,
+                isLoading: false,
+              }
+            : m
+        )
+      );
+
       await addModelMessage(db, appId, userId, activeSessionId, {
         content: finalAnswer,
         thinkingProcess,
-        sources: aiResponse.sources || [],
+        sources: finalSources,
         generatedWithThinking: !!thinkingProcess,
         generatedWithSearch: isSearchMode,
-        createdAt: new Date().toISOString(),
+        createdAt: modelCreatedAt,
       });
 
       const finalHistoryForReplies = [
@@ -1075,6 +1122,19 @@ export default function App() {
       }
     } catch (e) {
       console.error("Error regenerating message:", e);
+      // 失败时移除加载气泡并给出错误提示
+      setMessages((prev) => {
+        const cleaned = prev.filter((msg) => msg.id !== modelMessageId);
+        return [
+          ...cleaned,
+          {
+            id: `error-${Date.now()}`,
+            role: "model",
+            content: "抱歉，重新生成回答时出错，请重试。",
+            created_at: new Date().toISOString(),
+          },
+        ];
+      });
     } finally {
       setIsLoading(false);
     }
@@ -1134,7 +1194,7 @@ export default function App() {
 
           <div className="flex items-center justify-between px-1 pb-1">
             <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-              All chats
+              所有对话
             </span>
             {sessions.length > 0 && (
               <span className="text-xs text-gray-400">
@@ -1161,11 +1221,11 @@ export default function App() {
                 const diffDays = (now - created) / msPerDay;
                 if (diffDays <= 7) {
                   key = "prev7";
-                  label = "Previous 7 days";
+                  label = "过去7天";
                   order = 0;
                 } else if (diffDays <= 30) {
                   key = "prev30";
-                  label = "Previous 30 days";
+                  label = "过去30天";
                   order = 1;
                 } else {
                   const year = created.getFullYear();
