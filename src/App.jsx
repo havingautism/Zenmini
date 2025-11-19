@@ -1501,7 +1501,7 @@ export default function App() {
                   <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
                     <span className="flex items-center justify-center w-5 h-5 rounded-full ">
                       <img
-                        src="https://commons.wikimedia.org/wiki/Special:FilePath/Google-gemini-icon.svg"
+                        src={GeminiLogo}
                         alt="Google Gemini"
                         className="w-4 h-4"
                       />
