@@ -110,6 +110,7 @@ export default function App() {
   const [sessionMenuId, setSessionMenuId] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteTargetSession, setDeleteTargetSession] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const messagesEndRef = useRef(null);
   const uploadMenuRef = useRef(null);
@@ -1141,497 +1142,517 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen w-full bg-white text-gray-900 overflow-hidden text-[90%]">
-      {/* 侧边栏 */}
-      <div className="flex flex-col w-72 border-r border-gray-100 bg-white text-gray-900 h-full">
-        {/* 顶部 Logo + 标题 */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-4 h-18">
-          <div className="flex items-center">
-            <Bot size={26} className="text-indigo-500" />
-            <span className="ml-2 font-semibold text-base tracking-wide">
-              BeeBot
-            </span>
-          </div>
-        </div>
-
-        {/* New Chat */}
-        <div className="px-5 pb-4">
-          <button
-            onClick={handleNewChat}
-            className="flex items-center justify-center w-full rounded-lg bg-indigo-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-400 transition-colors"
-          >
-            <MessageSquarePlus size={20} className="mr-2" />
-            新建对话
-          </button>
-        </div>
-
-        {/* 搜索框 */}
-        <div className="px-5 pb-4">
-          <div className="relative flex items-center">
-            <Search
-              size={18}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10"
-            />
-            <input
-              type="text"
-              placeholder="搜索聊天"
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500   
-  focus:border-transparent"
-            />
-            <button className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-500">
-              <SlidersHorizontal size={18} />
-            </button>
-          </div>
-        </div>
-
-        {/* 会话列表 */}
-        <nav className="flex-1 overflow-y-auto space-y-2 px-4 pb-4">
-          {isConfigMissing && (
-            <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-              Supabase 配置缺失！请在设置中填写 Supabase 配置。
-            </div>
-          )}
-
-          <div className="flex items-center justify-between px-1 pb-1">
-            <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-              所有对话
-            </span>
-            {sessions.length > 0 && (
-              <span className="text-xs text-gray-400">
-                共 {sessions.length} 条
-              </span>
-            )}
-          </div>
-
-          {(() => {
-            if (!sessions || sessions.length === 0) return null;
-
-            const now = new Date();
-            const msPerDay = 1000 * 60 * 60 * 24;
-            const groupsMap = new Map();
-
-            sessions.forEach((s) => {
-              const created = s.created_at ? new Date(s.created_at) : null;
-              let key = "other";
-              let label = "更早";
-              let order = 100;
-              let sortDate = created ? created.getTime() : 0;
-
-              if (created) {
-                const diffDays = (now - created) / msPerDay;
-                if (diffDays <= 7) {
-                  key = "prev7";
-                  label = "过去7天";
-                  order = 0;
-                } else if (diffDays <= 30) {
-                  key = "prev30";
-                  label = "过去30天";
-                  order = 1;
-                } else {
-                  const year = created.getFullYear();
-                  const month = created.getMonth() + 1;
-                  key = `month-${year}-${month}`;
-                  label = `${year} 年 ${month.toString().padStart(2, "0")} 月`;
-                  sortDate = new Date(year, month - 1, 1).getTime();
-                  order = 10;
-                }
-              }
-
-              if (!groupsMap.has(key)) {
-                groupsMap.set(key, {
-                  key,
-                  label,
-                  order,
-                  sortDate,
-                  items: [],
-                });
-              }
-              groupsMap.get(key).items.push(s);
-            });
-
-            const groups = Array.from(groupsMap.values()).sort((a, b) => {
-              if (a.order !== b.order) return a.order - b.order;
-              return b.sortDate - a.sortDate;
-            });
-
-            return groups.map((group) => (
-              <div key={group.label} className="mt-2">
-                <div className="px-2 text-xs font-medium text-gray-500">
-                  {group.label}
-                </div>
-                <div className="mt-1 space-y-1">
-                  {group.items.map((session) => {
-                    const isActive = activeSessionId === session.id;
-                    return (
-                      <button
-                        key={session.id}
-                        onClick={() => handleSelectSession(session.id)}
-                        className={`group relative flex w-full items-center rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                          isActive
-                            ? "bg-indigo-50 text-gray-900"
-                            : "text-gray-800 hover:bg-gray-100"
-                        }`}
-                      >
-                        <div className="flex min-w-0 flex-1 items-center gap-3">
-                          <span
-                            className={`h-2 w-2 flex-shrink-0 rounded-full ${
-                              isActive ? "bg-indigo-500" : "bg-gray-300"
-                            }`}
-                          ></span>
-                          <div className="min-w-0 flex-1">
-                            <div
-                              className="truncate text-sm font-medium"
-                              title={session.title}
-                            >
-                              {session.title}
-                            </div>
-                            <div className="mt-0.5 text-xs text-gray-400">
-                              {formatSessionTime(session.created_at)}
-                            </div>
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={(e) => handleDeleteSession(e, session)}
-                          className="ml-2 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500    
-  group-hover:opacity-100"
-                          title="删除此聊天记录"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ));
-          })()}
-        </nav>
-
-        {/* 底部用户信息 */}
-        <button
-          onClick={() => setIsSettingsModalOpen(true)}
-          className="p-4 border-t border-gray-100 hover:bg-gray-50 transition-colors"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <User
-                size={24}
-                className="p-1 bg-gray-200 text-gray-700 rounded-full"
-              />
-              {userId && (
-                <span
-                  className="ml-3 text-sm font-medium truncate text-gray-800"
-                  title={userId}
-                >
-                  User: {userId.substring(0, 10)}...
-                </span>
-              )}
-            </div>
-            <ChevronsUpDown size={16} className="text-gray-400" />
-          </div>
-        </button>
-      </div>
-
-      {/* 主窗格 */}
-      <div className="flex-1 flex flex-col h-full bg-white relative">
-        {isSessionLoading && activeSessionId && (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
-            <div className="w-14 h-14 rounded-full bg-indigo-50 flex items-center justify-center shadow-sm">
-              <Loader2 className="w-7 h-7 text-indigo-500 animate-spin" />
-            </div>
-            <p className="mt-4 text-sm text-gray-600">正在切换会话…</p>
-            <p className="mt-1 text-xs text-gray-400">为你载入历史对话</p>
-          </div>
-        )}
-        <div className="flex items-center justify-between p-4 h-18 border-b border-gray-100">
-          <h2 className="text-xl font-semibold">
-            {activeSessionId
-              ? sessions.find((s) => s.id === activeSessionId)?.title ||
-                "聊天中..."
-              : "新聊天"}
-          </h2>
-          <div className="flex items-center space-x-3">
+    <div className="h-screen w-full bg-gray-100 flex items-center justify-center p-2 text-gray-900">
+      <div className="relative flex w-full  h-full  bg-white rounded-4xl shadow-soft-card border border-gray-200 overflow-hidden">
+        {/* 左侧竖向图标栏（桌面端可见） */}
+        <div className="hidden sm:flex flex-col justify-between py-6 px-8 w-12">
+          <div className="flex flex-col items-center space-y-3">
             <button
-              onClick={handleSummarizeChat}
-              disabled={
-                isLoading ||
-                isSummaryLoading ||
-                !activeSessionId ||
-                messages.length === 0
-              }
-              className="flex items-center px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md text-sm hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={handleNewChat}
+              className="w-9 h-9 rounded-2xl bg-black text-white flex items-center justify-center shadow-soft-card"
+              title="新建对话"
             >
-              <Sparkles size={16} className="mr-1.5 text-yellow-500" />
-              总结对话
+              <MessageSquarePlus size={18} />
             </button>
-            <button className="p-2 rounded-full hover:bg-gray-200 text-gray-600">
-              <Share2 size={20} />
+            {/* <button className="w-9 h-9 rounded-2xl bg-white/80 text-gray-400 border border-[#e2d8cd] flex items-center justify-center">
+              <Bot size={16} />
+            </button> */}
+            <button
+              className="w-9 h-9 rounded-2xl bg-white/40 text-gray-300 border border-[#efe5da] flex items-center justify-center"
+              title="会话历史"
+              onClick={() => setIsSidebarOpen((prev) => !prev)}
+            >
+              <History size={15} />
             </button>
           </div>
         </div>
 
-        {!activeSessionId ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-            <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mb-6 shadow-inner">
-              <span className="text-4xl">🔮</span>
-            </div>
-            <h1 className="text-4xl font-bold text-gray-800">Good Morning!</h1>
-            <h2 className="text-3xl text-gray-600 mt-2">
-              How Can I <span className="text-indigo-600">Assist You</span>{" "}
-              Today?
-            </h2>
-          </div>
-        ) : (
-          <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
-            {(() => {
-              const lastModelMessageIndex = [...messages].findLastIndex(
-                (m) => m.role === "model"
-              );
-              const orderedMessages = [...messages].sort((a, b) => {
-                const at = a.created_at ? new Date(a.created_at).getTime() : 0;
-                const bt = b.created_at ? new Date(b.created_at).getTime() : 0;
-                return at - bt;
-              });
-              return orderedMessages.map((msg, index) => (
-                <MessageItem
-                  key={msg.id || index}
-                  msg={msg}
-                  isTtsLoading={isTtsLoading}
-                  playingMessageId={playingMessageId}
-                  onPlayAudio={handlePlayAudio}
-                  onStopAudio={handleStopAudio}
-                  onTranslate={handleTranslateMessage}
-                  isTranslating={isTranslatingId === msg.id}
-                  translatedText={translations[msg.id] || ""}
-                  expandedSourcesMessageId={expandedSourcesMessageId}
-                  setExpandedSourcesMessageId={setExpandedSourcesMessageId}
-                  isLastMessage={index === orderedMessages.length - 1}
-                  onCopy={handleCopy}
-                  copiedMessageId={copiedMessageId}
-                  onRegenerate={handleRegenerate}
-                  isLastModelMessage={
-                    msg.role === "model" && index === lastModelMessageIndex
-                  }
-                />
-              ));
-            })()}
-
-            <div ref={messagesEndRef} />
-          </div>
-        )}
-
-        <div className="p-4 border-t border-gray-100 bg-white">
-          {suggestedReplies.length > 0 && (
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <span className="text-xs font-semibold text-indigo-600 flex items-center">
-                <Sparkles size={14} className="mr-1" />
-                延伸问题
-              </span>
-              <div className="flex flex-wrap gap-2 flex-1">
-                {suggestedReplies.map((reply, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleSuggestedReplyClick(reply)}
-                    className="px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full text-xs hover:bg-indigo-100 hover:border-indigo-200 transition-colors max-w-full"
-                  >
-                    <SuggestedReplyMarkdown content={reply} />
-                  </button>
-                ))}
+        {/* 会话侧边栏（移动端，仅会话历史） */}
+        {isSidebarOpen && (
+          <div className="sm:hidden absolute inset-y-3 left-3 right-3 max-w-[90vw] mx-auto rounded-3xl bg-white border border-gray-200 shadow-soft-card z-30 flex flex-col">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  所有对话
+                </span>
+                <button
+                  type="button"
+                  onClick={handleNewChat}
+                  className="inline-flex items-center px-2 py-1 rounded-full text-[11px] bg-black text-white"
+                >
+                  <MessageSquarePlus size={12} className="mr-1" />
+                  新建
+                </button>
               </div>
-            </div>
-          )}
-
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            <div className="relative" ref={uploadMenuRef}>
-              <button
-                onClick={() => setIsUploadMenuOpen((p) => !p)}
-                className="flex items-center p-2 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors shadow-sm"
-                title="上传文件 (暂不可用)"
-              >
-                <Plus size={16} className="text-gray-700" />
-              </button>
-              {isUploadMenuOpen && (
-                <div className="absolute bottom-full left-0 mb-2 w-52 bg-white border border-gray-200 rounded-xl shadow-xl z-20">
-                  <div className="px-3 py-2 border-b border-gray-100 text-xs font-semibold text-gray-500">
-                    上传（开发中）
-                  </div>
-                  <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                    <File size={16} className="mr-2 text-indigo-500" /> 上传文档
-                  </button>
-                  <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                    <Image size={16} className="mr-2 text-indigo-500" />{" "}
-                    上传图片
-                  </button>
-                  <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                    <Video size={16} className="mr-2 text-indigo-500" />{" "}
-                    上传视频
-                  </button>
-                  <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors rounded-b-xl">
-                    <Mic size={16} className="mr-2 text-indigo-500" /> 上传音频
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* 模型选择器 */}
-            <div className="relative" ref={modelMenuRef}>
               <button
                 type="button"
-                onClick={() => setIsModelMenuOpen((p) => !p)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-sm font-medium text-gray-800 shadow-sm border border-gray-200 transition-colors"
+                onClick={() => setIsSidebarOpen(false)}
+                className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100"
               >
-                <span className="flex items-center justify-center w-5 h-5 rounded-full ">
-                  <img
-                    src={GeminiLogo}
-                    alt="Google Gemini"
-                    className="w-4 h-4"
-                  />
-                </span>
-                <span className="whitespace-nowrap">
-                  {selectedModel === "gemini-2.5-flash"
-                    ? "Gemini 2.5 Flash"
-                    : "Gemini 2.5 Pro"}
-                </span>
-                <ChevronsUpDown size={14} className="text-gray-400" />
+                ×
               </button>
-              {isModelMenuOpen && (
-                <div className="absolute bottom-full left-0 mb-2 w-56 bg-white border border-gray-200 rounded-xl shadow-xl z-20">
-                  <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
-                    <span className="flex items-center justify-center w-5 h-5 rounded-full ">
-                      <img
-                        src={GeminiLogo}
-                        alt="Google Gemini"
-                        className="w-4 h-4"
-                      />
-                    </span>
-                    <span className="text-xs font-semibold text-gray-600">
-                      Gemini 模型
-                    </span>
-                  </div>
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-y-auto px-3 py-2 space-y-1 text-sm">
+              {isConfigMissing && (
+                <div className="mb-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
+                  Supabase 配置缺失，请在设置中填写。
+                </div>
+              )}
+
+              {sessions.length === 0 && (
+                <div className="text-xs text-gray-400 px-1 py-2">
+                  暂无会话，发送第一条消息开始聊天。
+                </div>
+              )}
+
+              {sessions.map((session) => {
+                const isActive = activeSessionId === session.id;
+                return (
                   <button
-                    type="button"
+                    key={session.id}
                     onClick={() => {
-                      setSelectedModel("gemini-2.5-flash");
-                      setIsModelMenuOpen(false);
+                      handleSelectSession(session.id);
+                      setIsSidebarOpen(false);
                     }}
-                    className={`w-full px-3 py-2 text-left text-sm flex items-center justify-between hover:bg-indigo-50 transition-colors ${
-                      selectedModel === "gemini-2.5-flash"
-                        ? "text-indigo-700 bg-indigo-50"
-                        : "text-gray-700"
+                    className={`group flex w-full items-center rounded-2xl px-3 py-2 text-left transition-colors ${
+                      isActive
+                        ? "bg-black text-white"
+                        : "bg-white hover:bg-gray-100 text-gray-900"
                     }`}
                   >
-                    <div>
-                      <div className="font-medium">Gemini 2.5 Flash</div>
-                      <div className="text-xs text-gray-400">
-                        快速响应，适合日常对话
-                      </div>
-                    </div>
-                    {selectedModel === "gemini-2.5-flash" && (
-                      <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600">
-                        当前
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate text-sm font-medium">
+                        {session.title || "未命名对话"}
                       </span>
-                    )}
+                      <span
+                        className={`mt-0.5 text-[11px] ${
+                          isActive ? "text-gray-300" : "text-gray-400"
+                        }`}
+                      >
+                        {formatSessionTime(
+                          session.created_at || session.createdAt
+                        )}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteSession(e, session)}
+                      className={`ml-2 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs transition-colors ${
+                        isActive
+                          ? "text-gray-300 hover:bg-red-50 hover:text-red-500"
+                          : "text-gray-400 hover:bg-red-50 hover:text-red-500"
+                      }`}
+                      title="删除会话"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </button>
+                );
+              })}
+            </div>
+
+            <div className="border-t border-gray-100 px-4 py-3 text-[11px] text-gray-400 flex items-center justify-between">
+              <span>会话数：{sessions.length}</span>
+            </div>
+          </div>
+        )}
+
+        {/* 会话侧边栏（桌面端，仅会话历史） */}
+        {isSidebarOpen && (
+          <div className="hidden sm:flex absolute inset-y-3 left-3 w-72 rounded-3xl bg-white border border-gray-200 shadow-soft-card z-30 flex-col">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+              <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                所有对话
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen(false)}
+                className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-y-auto px-3 py-2 space-y-1 text-sm">
+              {sessions.length === 0 && (
+                <div className="text-xs text-gray-400 px-1 py-2">
+                  暂无会话，发送第一条消息开始聊天。
+                </div>
+              )}
+
+              {sessions.map((session) => {
+                const isActive = activeSessionId === session.id;
+                return (
                   <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedModel("gemini-2.5-pro");
-                      setIsModelMenuOpen(false);
-                    }}
-                    className={`w-full px-3 py-2 text-left text-sm flex items-center justify-between hover:bg-indigo-50 transition-colors rounded-b-xl ${
-                      selectedModel === "gemini-2.5-pro"
-                        ? "text-indigo-700 bg-indigo-50"
-                        : "text-gray-700"
+                    key={session.id}
+                    onClick={() => handleSelectSession(session.id)}
+                    className={`group flex w-full items-center rounded-2xl px-3 py-2 text-left transition-colors ${
+                      isActive
+                        ? "bg-black text-white"
+                        : "bg-white hover:bg-gray-100 text-gray-900"
                     }`}
                   >
-                    <div>
-                      <div className="font-medium">Gemini 2.5 Pro</div>
-                      <div className="text-xs text-gray-400">
-                        更强推理，适合复杂任务
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate text-sm font-medium">
+                        {session.title || "未命名对话"}
+                      </span>
+                      <span
+                        className={`mt-0.5 text-[11px] ${
+                          isActive ? "text-gray-300" : "text-gray-400"
+                        }`}
+                      >
+                        {formatSessionTime(
+                          session.created_at || session.createdAt
+                        )}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteSession(e, session)}
+                      className="ml-2 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                      title="删除会话"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="border-t border-gray-100 px-4 py-3 text-[11px] text-gray-400 flex items-center justify-between">
+              <span>会话数：{sessions.length}</span>
+            </div>
+          </div>
+        )}
+
+        {/* 主内容区域 */}
+        <div className="flex-1 flex flex-col min-h-0">
+          {/* 顶部栏：左侧小图标 + 右侧 Get Pro */}
+          <header className="flex items-center justify-between px-4 sm:px-8 pt-5 sm:pt-6">
+            {/* 仅移动端显示的会话按钮 */}
+            <button
+              type="button"
+              className="w-8 h-8 rounded-2xl border border-[#e4d9ce] flex items-center justify-center text-gray-400 bg-white/80 sm:hidden"
+              onClick={() => setIsSidebarOpen(true)}
+            >
+              <LayoutGrid size={15} />
+            </button>
+
+            <button
+              type="button"
+              className="inline-flex items-center rounded-full bg-black text-white text-[11px] sm:text-xs px-3 sm:px-4 py-1.5 shadow-soft-card"
+              onClick={() => setIsSettingsModalOpen(true)}
+            >
+              <span className="w-5 h-5 mr-2 rounded-full bg-gradient-to-br from-gray-200 via-gray-50 to-gray-400" />
+              Get Pro
+            </button>
+          </header>
+
+          {/* 中心聊天区域 */}
+          <main className="flex-1 flex flex-col items-center justify-between px-3 sm:px-10 pb-4 sm:pb-2 pt-4 sm:pt-2 min-h-0">
+            {/* 中间：标题 + 消息列表 */}
+            <div className="flex-1 w-full flex flex-col items-center min-h-0 overflow-auto">
+              <div className="w-full max-w-3xl flex-1 flex flex-col items-center">
+                {/* 首屏标题 */}
+                {messages.length === 0 && !isSessionLoading && (
+                  <div className="pt-16 pb-10 text-center">
+                    <h1 className="text-3xl sm:text-4xl font-semibold text-black mb-4">
+                      What can I help with?
+                    </h1>
+                  </div>
+                )}
+
+                {/* 消息列表 */}
+                <div className="flex-1 w-full overflow-y-auto flex flex-col space-y-2 pb-4">
+                  {isSessionLoading && (
+                    <div className="flex justify-center pt-10">
+                      <div className="inline-flex items-center rounded-full bg-black text-white px-4 py-2 text-xs shadow-soft-card">
+                        <Loader2 className="animate-spin mr-2" size={16} />
+                        正在加载会话…
                       </div>
                     </div>
-                    {selectedModel === "gemini-2.5-pro" && (
-                      <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600">
-                        当前
+                  )}
+
+                  {messages.map((msg, index) => (
+                    <MessageItem
+                      key={msg.id || index}
+                      msg={msg}
+                      isTtsLoading={isTtsLoading}
+                      playingMessageId={playingMessageId}
+                      onPlayAudio={handlePlayAudio}
+                      onStopAudio={handleStopAudio}
+                      onTranslate={handleTranslateMessage}
+                      isTranslating={isTranslatingId === msg.id}
+                      translatedText={translations[msg.id] || ""}
+                      expandedSourcesMessageId={expandedSourcesMessageId}
+                      setExpandedSourcesMessageId={setExpandedSourcesMessageId}
+                      isLastMessage={index === messages.length - 1}
+                      onCopy={handleCopy}
+                      copiedMessageId={copiedMessageId}
+                      onRegenerate={handleRegenerate}
+                      isLastModelMessage={
+                        msg.role === "model" &&
+                        messages
+                          .slice(index + 1)
+                          .every((m) => m.role !== "model")
+                      }
+                    />
+                  ))}
+
+                  <div ref={messagesEndRef} />
+                </div>
+              </div>
+            </div>
+
+            {/* 底部提示条（首屏时显示） */}
+            {messages.length === 0 && (
+              <div className="w-full max-w-xl mb-4">
+                <div className="mx-auto rounded-full bg-[#f2ebe2] px-5 py-3 text-[11px] text-gray-600 text-center shadow-sm">
+                  You’ve hit the Free plan limit for BeeBot.
+                  <span className="block text-gray-500 mt-0.5">
+                    Responses may be slower until your limit resets.
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* 建议问句 + 输入区域 */}
+            <div className="w-full max-w-3xl">
+              {suggestedReplies.length > 0 && (
+                <div className="mb-2 p-2 flex flex-wrap gap-2 rounded-[26px] border border-gray-200 shadow-soft-card">
+                  {suggestedReplies.map((reply, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleSuggestedReplyClick(reply)}
+                      className="px-3 py-2 rounded-3xl bg-bubble-hint text-[13px] text-gray-800 hover:bg-[#f1e5d6] transition-colors max-w-full text-
+  left"
+                    >
+                      <SuggestedReplyMarkdown content={reply} />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* 输入卡片 */}
+              <form onSubmit={handleSendMessage} className="relative w-full">
+                <div className="flex items-center rounded-[26px] bg-white shadow-soft-card border border-[#efe4d7] px-4 py-2 sm:py-3">
+                  {/* 左侧工具按钮：上传 / Search / Thinking */}
+                  <div
+                    className="flex items-center space-x-2 mr-3 text-gray-400"
+                    ref={uploadMenuRef}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setIsUploadMenuOpen((p) => !p)}
+                      className="w-6 h-6 rounded-full border border-[#e4d7c8] flex items-center justify-center hover:bg-bubble-hint/60 transition-   
+  colors"
+                      title="上传文件 (暂不可用)"
+                    >
+                      <Plus size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsSearchMode((p) => !p)}
+                      className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] border ${
+                        isSearchMode
+                          ? "bg-black text-white border-black"
+                          : "border-[#e4d7c8] text-gray-500 bg-white"
+                      }`}
+                    >
+                      <Globe size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsThinkingMode((p) => !p)}
+                      className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] border ${
+                        isThinkingMode
+                          ? "bg-black text-white border-black"
+                          : "border-[#e4d7c8] text-gray-500 bg-white"
+                      }`}
+                    >
+                      <Brain size={13} />
+                    </button>
+                  </div>
+
+                  {/* 输入框本体 */}
+                  <input
+                    type="text"
+                    value={currentInput}
+                    onChange={(e) => {
+                      setCurrentInput(e.target.value);
+                      if (e.target.value.length > 0) {
+                        setSuggestedReplies([]);
+                        setIsUploadMenuOpen(false);
+                      }
+                    }}
+                    placeholder={
+                      isLoading ? "BeeBot 正在思考中..." : "Ask anything"
+                    }
+                    disabled={isLoading}
+                    className="flex-1 bg-transparent border-none outline-none text-[14px] sm:text-[15px] placeholder:text-gray-400"
+                  />
+
+                  {/* 模型小标签（桌面显示） */}
+                  <div
+                    className="ml-3 hidden sm:flex items-center"
+                    ref={modelMenuRef}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setIsModelMenuOpen((p) => !p)}
+                      className="inline-flex items-center px-2.5 py-1 rounded-full bg-bubble-hint text-[11px] text-gray-700 hover:bg-[#f1e5d6] border
+  border-[#e6d9ca]"
+                    >
+                      <span className="flex items-center justify-center w-4 h-4 rounded-full mr-1.5">
+                        <img
+                          src={GeminiLogo}
+                          alt="Google Gemini"
+                          className="w-3 h-3"
+                        />
                       </span>
+                      {selectedModel === "gemini-2.5-flash"
+                        ? "2.5 Flash"
+                        : "2.5 Pro"}
+                      <ChevronsUpDown size={12} className="ml-1" />
+                    </button>
+                  </div>
+
+                  {/* 发送按钮 */}
+                  <button
+                    type="submit"
+                    disabled={isLoading || !currentInput.trim()}
+                    className="ml-3 w-8 h-8 rounded-2xl bg-black text-white flex items-center justify-center shadow-soft-card disabled:opacity-40    
+  disabled:cursor-not-allowed"
+                  >
+                    {isLoading ? (
+                      <Loader2 size={18} className="animate-spin" />
+                    ) : (
+                      <ArrowUp size={18} />
                     )}
                   </button>
                 </div>
-              )}
-            </div>
 
-            {/* Thinking按钮 */}
-            <button
-              onClick={() => setIsThinkingMode((p) => !p)}
-              className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                isThinkingMode
-                  ? "bg-indigo-100 text-indigo-700"
-                  : "bg-gray-100 hover:bg-gray-200 text-gray-600"
-              }`}
-              title={isThinkingMode ? "思考模式: 开" : "思考模式: 关"}
-            >
-              <Brain size={14} className="mr-1.5" /> Thinking
-            </button>
+                {/* 上传菜单 */}
+                {isUploadMenuOpen && (
+                  <div className="absolute bottom-full left-0 mb-2 w-52 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-20">
+                    <div className="px-3 py-2 border-b border-gray-100 text-xs font-semibold text-gray-500">
+                      上传（开发中）
+                    </div>
+                    <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                      <File size={16} className="mr-2 text-gray-500" /> 上传文档
+                    </button>
+                    <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                      <Image size={16} className="mr-2 text-gray-500" />{" "}
+                      上传图片
+                    </button>
+                    <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                      <Video size={16} className="mr-2 text-gray-500" />{" "}
+                      上传视频
+                    </button>
+                    <button
+                      className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors rounded-
+  b-2xl"
+                    >
+                      <Mic size={16} className="mr-2 text-gray-500" /> 上传音频
+                    </button>
+                  </div>
+                )}
 
-            {/* Search按钮 */}
-            <button
-              onClick={() => setIsSearchMode((p) => !p)}
-              className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                isSearchMode
-                  ? "bg-indigo-100 text-indigo-700"
-                  : "bg-gray-100 hover:bg-gray-200 text-gray-600"
-              }`}
-              title={isSearchMode ? "联网搜索: 开" : "联网搜索: 关"}
-            >
-              <Globe size={14} className="mr-1.5" /> Search
-            </button>
+                {/* 模型选择弹层 */}
+                {isModelMenuOpen && (
+                  <div className="absolute bottom-full right-0 mb-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-20">
+                    <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
+                      <span className="flex items-center justify-center w-5 h-5 rounded-full ">
+                        <img
+                          src={GeminiLogo}
+                          alt="Google Gemini"
+                          className="w-4 h-4"
+                        />
+                      </span>
+                      <span className="text-xs font-semibold text-gray-600">
+                        Gemini 模型
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedModel("gemini-2.5-flash");
+                        setIsModelMenuOpen(false);
+                      }}
+                      className={`w-full px-3 py-2 text-left text-sm flex items-center justify-between hover:bg-bubble-hint transition-colors ${
+                        selectedModel === "gemini-2.5-flash"
+                          ? "text-gray-900 bg-bubble-hint"
+                          : "text-gray-700"
+                      }`}
+                    >
+                      <div>
+                        <div className="font-medium">Gemini 2.5 Flash</div>
+                        <div className="text-xs text-gray-400">
+                          快速响应，适合日常对话
+                        </div>
+                      </div>
+                      {selectedModel === "gemini-2.5-flash" && (
+                        <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-black text-white">
+                          当前
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedModel("gemini-2.5-pro");
+                        setIsModelMenuOpen(false);
+                      }}
+                      className={`w-full px-3 py-2 text-left text-sm flex items-center justify-between hover:bg-bubble-hint transition-colors        
+  rounded-b-2xl ${
+    selectedModel === "gemini-2.5-pro"
+      ? "text-gray-900 bg-bubble-hint"
+      : "text-gray-700"
+  }`}
+                    >
+                      <div>
+                        <div className="font-medium">Gemini 2.5 Pro</div>
+                        <div className="text-xs text-gray-400">
+                          更强推理，适合复杂任务
+                        </div>
+                      </div>
+                      {selectedModel === "gemini-2.5-pro" && (
+                        <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-black text-white">
+                          当前
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </form>
 
-            {/* <button className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-md text-sm hover:bg-gray-200 transition-colors">
-              Web Dev
-            </button>
-       
-            <button className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-md text-sm hover:bg-gray-200 transition-colors">
-              Deep Research
-            </button> */}
-          </div>
-
-          <form
-            onSubmit={handleSendMessage}
-            className="relative flex items-center space-x-3"
-          >
-            <div className="relative flex-1">
-              <input
-                type="text"
-                value={currentInput}
-                onChange={(e) => {
-                  setCurrentInput(e.target.value);
-                  if (e.target.value.length > 0) {
-                    setSuggestedReplies([]);
-                    setIsUploadMenuOpen(false);
+              {/* Summarize 入口（为了保留功能，可以弱化为小文字按钮） */}
+              <div className="mt-2 flex justify-end">
+                <button
+                  onClick={handleSummarizeChat}
+                  disabled={
+                    isLoading || isSummaryLoading || messages.length === 0
                   }
-                }}
-                placeholder={
-                  isLoading ? "BeeBot 正在思考中..." : "输入你的问题或命令..."
-                }
-                disabled={isLoading}
-                className="flex-1 w-full p-4 pl-6 pr-16 bg-gray-100 rounded-xl border-none shadow-inner focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+                  className="text-[11px] text-gray-500 hover:text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <span className="inline-flex items-center">
+                    <Sparkles size={12} className="mr-1" />
+                    总结当前对话
+                  </span>
+                </button>
+              </div>
+
+              <p className="mt-1 text-center text-[11px] text-gray-400">
+                AI can make mistakes. Please double-check responses.
+              </p>
             </div>
-            <button
-              type="submit"
-              disabled={isLoading || !currentInput.trim()}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-indigo-600 text-white rounded-lg shadow-md hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <Loader2 size={24} className="animate-spin" />
-              ) : (
-                <ArrowUp size={24} />
-              )}
-            </button>
-          </form>
+          </main>
         </div>
+      </div>
+
+      {/* 移动端底部小横条（纯装饰） */}
+      <div className="sm:hidden fixed bottom-2 left-0 right-0 flex justify-center pointer-events-none">
+        <div className="w-24 h-1.5 rounded-full bg-black/10" />
       </div>
 
       {isSummaryModalOpen && (
@@ -1666,6 +1687,7 @@ export default function App() {
           onToggleAutoPlayTts={() => setIsAutoPlayTts((prev) => !prev)}
         />
       )}
+
       {needsSchemaInit && (
         <SchemaInitModal
           sql={schemaSql}
@@ -1677,6 +1699,7 @@ export default function App() {
           }}
         />
       )}
+
       {isDeleteModalOpen && deleteTargetSession && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6">

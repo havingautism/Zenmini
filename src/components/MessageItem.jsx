@@ -14,10 +14,10 @@ import {
 import MarkdownRenderer from "./MarkdownRenderer";
 
 const THINKING_PHASES = [
-  "正在深度思考你的问题…",
-  "正在梳理思路和计划…",
+  "正在理解你的问题…",
+  "正在规划思考路径…",
   "正在检索和比对相关信息…",
-  "正在组织清晰易懂的回答…",
+  "正在组织更清晰的回答…",
 ];
 
 export default function MessageItem({
@@ -59,31 +59,31 @@ export default function MessageItem({
   }, [isThinkingLoading]);
 
   const botBubbleClass =
-    "bg-white text-gray-800 rounded-xl rounded-bl-none border border-gray-200";
+    "bg-bubble-bot text-gray-900 rounded-3xl rounded-bl-sm border border-[#ece4da]";
 
   return (
     <div className="flex justify-center">
       <div
-        className={`flex w-full max-w-4xl px-4 ${
+        className={`flex w-full max-w-3xl px-3 sm:px-4 ${
           isUser ? "justify-end" : "justify-start"
-        }`}
+        } mt-1 mb-1`}
       >
         <div
-          className={`flex flex-col max-w-[68%] shadow-md ${
+          className={`flex flex-col max-w-[100%] sm:max-w-[80%] shadow-soft-card ${
             isUser
-              ? "bg-indigo-600 text-white rounded-xl rounded-br-none"
+              ? "bg-bubble-user text-white rounded-3xl rounded-br-sm"
               : botBubbleClass
           }`}
         >
           {msg.thinkingProcess && (
             <button
               onClick={() => setIsThinkingVisible((prev) => !prev)}
-              className={`flex items-center text-xs font-semibold w-full p-2 text-left ${
-                isUser ? "text-indigo-200" : "text-indigo-600"
+              className={`flex items-center text-[11px] sm:text-xs font-semibold w-full px-4 py-2 text-left ${
+                isUser ? "text-indigo-100" : "text-gray-600"
               } ${
                 isThinkingVisible
-                  ? "bg-gray-50 rounded-t-xl"
-                  : "bg-transparent rounded-t-xl"
+                  ? "bg-[#f3ebe2] rounded-t-3xl"
+                  : "bg-transparent rounded-t-3xl"
               }`}
             >
               <ChevronDown
@@ -100,33 +100,33 @@ export default function MessageItem({
             <div
               className={`px-4 pt-2 ${isThinkingVisible ? "block" : "hidden"}`}
             >
-              <p className="whitespace-pre-wrap break-words italic text-gray-500 pb-2 border-b border-gray-200">
+              <p className="whitespace-pre-wrap break-words italic text-gray-500 pb-2 border-b border-gray-200 text-[13px] sm:text-[14px]">
                 <MarkdownRenderer content={msg.thinkingProcess} />
               </p>
             </div>
           )}
 
-          <div className="px-4 pt-4 pb-4">
+          <div className="px-4 pt-3 pb-3 sm:pt-4 sm:pb-4 text-[14px] sm:text-[15px] leading-relaxed">
             {isLoadingBubble ? (
               isThinkingLoading ? (
                 <div className="flex flex-col space-y-1">
-                  <span className="text-xs font-medium tracking-wide text-indigo-500">
-                    BeeBot 正在深度思考
+                  <span className="text-[11px] font-medium tracking-wide text-gray-500 uppercase">
+                    BeeBot is thinking
                   </span>
-                  <span className="text-sm text-gray-700">
+                  <span className="text-sm text-gray-700 mt-0.5">
                     {THINKING_PHASES[thinkingPhaseIndex]}
                   </span>
-                  <div className="mt-1 flex items-center space-x-1">
+                  <div className="mt-2 flex items-center space-x-1.5">
                     <span
-                      className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce"
+                      className="w-1.5 h-1.5 rounded-full bg-gray-500 animate-bounce"
                       style={{ animationDelay: "0s" }}
                     />
                     <span
-                      className="w-1.5 h-1.5 rounded-full bg-indigo-300 animate-bounce"
+                      className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce"
                       style={{ animationDelay: "0.2s" }}
                     />
                     <span
-                      className="w-1.5 h-1.5 rounded-full bg-indigo-200 animate-bounce"
+                      className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-bounce"
                       style={{ animationDelay: "0.4s" }}
                     />
                   </div>
@@ -165,7 +165,7 @@ export default function MessageItem({
             )}
 
             {msg.sources && msg.sources.length > 0 && (
-              <div className="mt-3 pt-2 border-t border-indigo-200">
+              <div className="mt-3 pt-2 border-t border-[#f0e6da]">
                 <button
                   className="flex justify-between items-center w-full text-xs font-semibold mb-1 opacity-80"
                   onClick={() =>
@@ -176,7 +176,7 @@ export default function MessageItem({
                 >
                   <span className="flex items-center">
                     <Globe size={14} className="mr-1" />
-                    参考来源({msg.sources.length})
+                    参考来源 ({msg.sources.length})
                   </span>
                   <ChevronDown
                     size={16}
@@ -193,9 +193,7 @@ export default function MessageItem({
                           href={source.uri}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className={`truncate block hover:underline ${
-                            isUser ? "text-blue-200" : "text-indigo-500"
-                          }`}
+                          className="truncate block hover:underline text-gray-700"
                           title={source.title}
                         >
                           {index + 1}. {source.title}
@@ -209,35 +207,35 @@ export default function MessageItem({
           </div>
 
           {!isUser && (
-            <div className="mt-auto pt-2 px-4 pb-2 border-t border-gray-100 flex items-center justify-between space-x-1">
+            <div className="mt-auto pt-2 px-4 pb-2 border-t border-gray-100 flex items-center justify-between space-x-1 text-[12px] sm:text-[13px]">
               <div className="flex items-center space-x-3">
                 {msg.generatedWithThinking && (
                   <div
-                    className="flex items-center text-xs opacity-60"
-                    title="此消息由深度思考模式 (Gemini Pro) 生成"
+                    className="flex items-center opacity-70"
+                    title="此消息由 Thinking 模式生成"
                   >
-                    <Brain size={14} className="mr-1 text-indigo-400" />
-                    <span className="text-indigo-600 text-xs">深度思考</span>
+                    <Brain size={14} className="mr-1 text-gray-500" />
+                    <span className="text-gray-500">Thinking</span>
                   </div>
                 )}
                 {msg.generatedWithSearch && (
                   <div
-                    className="flex items-center text-xs opacity-60"
-                    title="此消息已联网搜索"
+                    className="flex items-center opacity-70"
+                    title="此消息使用联网搜索"
                   >
-                    <Globe size={14} className="mr-1 text-indigo-400" />
-                    <span className="text-indigo-600 text-xs">已联网</span>
+                    <Globe size={14} className="mr-1 text-gray-500" />
+                    <span className="text-gray-500">Search</span>
                   </div>
                 )}
               </div>
 
               <div className="flex items-center space-x-1">
                 {copiedMessageId === msg.id ? (
-                  <Check size={26} className="text-green-500 p-1.5" />
+                  <Check size={22} className="text-green-500 p-1.5" />
                 ) : (
                   <button
                     onClick={() => onCopy(msg.content, msg.id)}
-                    className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
+                    className="p-1.5 rounded-full bg-[#f3ebe2] hover:bg-[#ece1d6] text-gray-800 transition-colors"
                     title="复制"
                   >
                     <Copy size={16} />
@@ -247,7 +245,7 @@ export default function MessageItem({
                 {isLastModelMessage && (
                   <button
                     onClick={onRegenerate}
-                    className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
+                    className="p-1.5 rounded-full bg-[#f3ebe2] hover:bg-[#ece1d6] text-gray-800 transition-colors"
                     title="重新生成"
                   >
                     <RefreshCw size={16} />
@@ -265,7 +263,7 @@ export default function MessageItem({
                     msg.role === "model") ? (
                   <button
                     onClick={onStopAudio}
-                    className="p-1.5 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors"
+                    className="p-1.5 rounded-full bg-[#f3ebe2] hover:bg-[#ece1d6] text-gray-800 transition-colors"
                     title="停止播放"
                   >
                     <StopCircle size={16} />
@@ -273,7 +271,7 @@ export default function MessageItem({
                 ) : (
                   <button
                     onClick={() => onPlayAudio(msg)}
-                    className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
+                    className="p-1.5 rounded-full bg-[#f3ebe2] hover:bg-[#ece1d6] text-gray-800 transition-colors"
                     title="播放语音"
                   >
                     <Volume2 size={16} />
@@ -288,7 +286,7 @@ export default function MessageItem({
                 ) : (
                   <button
                     onClick={() => onTranslate(msg)}
-                    className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
+                    className="p-1.5 rounded-full bg-[#f3ebe2] hover:bg-[#ece1d6] text-gray-800 transition-colors"
                     title={translatedText ? "隐藏翻译" : "翻译"}
                   >
                     <Languages size={16} />
