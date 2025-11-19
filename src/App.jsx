@@ -1343,8 +1343,7 @@ export default function App() {
               className="inline-flex items-center rounded-full bg-black text-white text-[11px] sm:text-xs px-3 sm:px-4 py-1.5 shadow-soft-card"
               onClick={() => setIsSettingsModalOpen(true)}
             >
-              <span className="w-5 h-5 mr-2 rounded-full bg-gradient-to-br from-gray-200 via-gray-50 to-gray-400" />
-              Get Pro
+              <span className="w-5 h-5 rounded-full bg-gradient-to-br from-gray-200 via-gray-50 to-gray-400" />
             </button>
           </header>
 
