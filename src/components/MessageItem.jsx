@@ -110,9 +110,7 @@ export default function MessageItem({
             {isLoadingBubble ? (
               isThinkingLoading ? (
                 <div className="flex flex-col space-y-1">
-                  <span className="text-[11px] font-medium tracking-wide text-gray-500 uppercase">
-                    BeeBot is thinking
-                  </span>
+                  
                   <span className="text-sm text-gray-700 mt-0.5">
                     {THINKING_PHASES[thinkingPhaseIndex]}
                   </span>
@@ -133,7 +131,6 @@ export default function MessageItem({
                 </div>
               ) : (
                 <div className="flex items-center space-x-2 text-xs text-gray-500">
-                  <span>BeeBot 正在生成回答</span>
                   <div className="flex items-center space-x-0.5">
                     <span
                       className="w-1 h-1 rounded-full bg-gray-400 animate-bounce"
@@ -215,7 +212,6 @@ export default function MessageItem({
                     title="此消息由 Thinking 模式生成"
                   >
                     <Brain size={14} className="mr-1 text-gray-500" />
-                    <span className="text-gray-500">Thinking</span>
                   </div>
                 )}
                 {msg.generatedWithSearch && (
@@ -224,7 +220,6 @@ export default function MessageItem({
                     title="此消息使用联网搜索"
                   >
                     <Globe size={14} className="mr-1 text-gray-500" />
-                    <span className="text-gray-500">Search</span>
                   </div>
                 )}
               </div>

@@ -85,19 +85,6 @@ export default function App() {
 
   const [isTtsLoading, setIsTtsLoading] = useState(null);
   const [playingMessageId, setPlayingMessageId] = useState(null);
-  const [currentAudio, setCurrentAudio] = useState(null);
-
-  const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash"); // 默认选择flash
-  const [isThinkingMode, setIsThinkingMode] = useState(true);
-  const [isSearchMode, setIsSearchMode] = useState(true);
-  const [isUploadMenuOpen, setIsUploadMenuOpen] = useState(false);
-  const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
-
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [userApiKey, setUserApiKey] = useState("");
-  const [localSbConfig, setLocalSbConfig] = useState(EMPTY_SB_CONFIG);
-  const [needsSchemaInit, setNeedsSchemaInit] = useState(false);
-  const [schemaSql, setSchemaSql] = useState("");
 
   const [isAutoPlayTts, setIsAutoPlayTts] = useState(false);
   const [expandedSourcesMessageId, setExpandedSourcesMessageId] =
@@ -111,6 +98,19 @@ export default function App() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteTargetSession, setDeleteTargetSession] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash"); // 默认选择flash
+  const [isThinkingMode, setIsThinkingMode] = useState(true);
+  const [isSearchMode, setIsSearchMode] = useState(true);
+  const [isUploadMenuOpen, setIsUploadMenuOpen] = useState(false);
+  const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
+
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [userApiKey, setUserApiKey] = useState("");
+  const [localSbConfig, setLocalSbConfig] = useState(EMPTY_SB_CONFIG);
+  const [needsSchemaInit, setNeedsSchemaInit] = useState(false);
+  const [schemaSql, setSchemaSql] = useState("");
 
   const messagesEndRef = useRef(null);
   const uploadMenuRef = useRef(null);
@@ -180,7 +180,13 @@ export default function App() {
   useEffect(() => {
     try {
       const storedKey = localStorage.getItem("userApiKey");
-      if (storedKey) setUserApiKey(storedKey);
+      if (storedKey) {
+        setUserApiKey(storedKey);
+      } else {
+        // Fallback to env variable if no localStorage key
+        const envKey = import.meta.env.VITE_GEMINI_API_KEY;
+        if (envKey) setUserApiKey(envKey);
+      }
     } catch {}
 
     const autoInitAndSignIn = async () => {
@@ -400,6 +406,46 @@ export default function App() {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  const getGroupedSessions = () => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const groups = {
+      "今天": [],
+      "昨天": [],
+      "过去 7 天": [],
+      "过去 30 天": [],
+      "更早": [],
+    };
+
+    const filteredSessions = sessions.filter((s) =>
+      (s.title || "未命名对话").toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    filteredSessions.forEach((session) => {
+      const date = new Date(session.created_at || session.createdAt);
+      if (date >= today) {
+        groups["今天"].push(session);
+      } else if (date >= yesterday) {
+        groups["昨天"].push(session);
+      } else if (date >= sevenDaysAgo) {
+        groups["过去 7 天"].push(session);
+      } else if (date >= thirtyDaysAgo) {
+        groups["过去 30 天"].push(session);
+      } else {
+        groups["更早"].push(session);
+      }
+    });
+
+    return groups;
   };
 
   const handleSelectSession = async (id) => {
@@ -1260,7 +1306,7 @@ export default function App() {
 
         {/* 会话侧边栏（桌面端，仅会话历史） */}
         {isSidebarOpen && (
-          <div className="hidden sm:flex absolute inset-y-3 left-3 w-72 rounded-3xl bg-white border border-gray-200 shadow-soft-card z-30 flex-col">
+          <div className="hidden sm:flex absolute inset-y-3 left-3 w-72 rounded-3xl bg-white border border-gray-100 shadow-2xl z-30 flex-col">
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
               <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                 所有对话
@@ -1274,48 +1320,79 @@ export default function App() {
               </button>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto px-3 py-2 space-y-1 text-sm">
+            <div className="px-3 py-2">
+              <div className="relative">
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={14}
+                />
+                <input
+                  type="text"
+                  placeholder="搜索对话..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full rounded-xl bg-gray-50 border-none py-2 pl-9 pr-3 text-xs text-gray-700 placeholder:text-gray-400 focus:ring-1 focus:ring-black/5 transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-y-auto px-3 py-2 space-y-4 text-sm">
               {sessions.length === 0 && (
                 <div className="text-xs text-gray-400 px-1 py-2">
                   暂无会话，发送第一条消息开始聊天。
                 </div>
               )}
 
-              {sessions.map((session) => {
-                const isActive = activeSessionId === session.id;
+              {Object.entries(getGroupedSessions()).map(([groupName, groupSessions]) => {
+                if (groupSessions.length === 0) return null;
                 return (
-                  <button
-                    key={session.id}
-                    onClick={() => handleSelectSession(session.id)}
-                    className={`group flex w-full items-center rounded-2xl px-3 py-2 text-left transition-colors ${
-                      isActive
-                        ? "bg-black text-white"
-                        : "bg-white hover:bg-gray-100 text-gray-900"
-                    }`}
-                  >
-                    <div className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate text-sm font-medium">
-                        {session.title || "未命名对话"}
-                      </span>
-                      <span
-                        className={`mt-0.5 text-[11px] ${
-                          isActive ? "text-gray-300" : "text-gray-400"
-                        }`}
-                      >
-                        {formatSessionTime(
-                          session.created_at || session.createdAt
-                        )}
-                      </span>
+                  <div key={groupName}>
+                    <div className="px-2 py-1 text-[10px] font-medium text-gray-400 uppercase tracking-wider">
+                      {groupName}
                     </div>
-                    <button
-                      type="button"
-                      onClick={(e) => handleDeleteSession(e, session)}
-                      className="ml-2 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-                      title="删除会话"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </button>
+                    <div className="space-y-0.5 mt-1">
+                      {groupSessions.map((session) => {
+                        const isActive = activeSessionId === session.id;
+                        return (
+                          <button
+                            key={session.id}
+                            onClick={() => handleSelectSession(session.id)}
+                            className={`group flex w-full items-center rounded-xl px-2 py-2 text-left transition-colors ${
+                              isActive
+                                ? "bg-black text-white"
+                                : "bg-white hover:bg-gray-100 text-gray-900"
+                            }`}
+                          >
+                            <div className="flex min-w-0 flex-1 flex-col">
+                              <span className="truncate text-sm font-medium">
+                                {session.title || "未命名对话"}
+                              </span>
+                            </div>
+                            {isActive && (
+                              <button
+                                type="button"
+                                onClick={(e) => handleDeleteSession(e, session)}
+                                className="ml-2 inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
+                                title="删除会话"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            )}
+                            {!isActive && (
+                              <button
+                                type="button"
+                                onClick={(e) => handleDeleteSession(e, session)}
+                                className="ml-2 hidden group-hover:inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                                title="删除会话"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 );
               })}
             </div>
@@ -1340,7 +1417,7 @@ export default function App() {
 
             <button
               type="button"
-              className="inline-flex items-center rounded-full bg-black text-white text-[11px] sm:text-xs px-3 sm:px-4 py-1.5 shadow-soft-card"
+              className="ml-auto inline-flex items-center rounded-full bg-black text-white text-[11px] sm:text-xs px-3 sm:px-4 py-1.5 shadow-soft-card"
               onClick={() => setIsSettingsModalOpen(true)}
             >
               <span className="w-5 h-5 rounded-full bg-gradient-to-br from-gray-200 via-gray-50 to-gray-400" />
@@ -1449,17 +1526,7 @@ export default function App() {
                     >
                       <Plus size={14} />
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsSearchMode((p) => !p)}
-                      className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] border ${
-                        isSearchMode
-                          ? "bg-black text-white border-black"
-                          : "border-[#e4d7c8] text-gray-500 bg-white"
-                      }`}
-                    >
-                      <Globe size={13} />
-                    </button>
+                   
                     <button
                       type="button"
                       onClick={() => setIsThinkingMode((p) => !p)}
@@ -1470,6 +1537,17 @@ export default function App() {
                       }`}
                     >
                       <Brain size={13} />
+                    </button>
+                     <button
+                      type="button"
+                      onClick={() => setIsSearchMode((p) => !p)}
+                      className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] border ${
+                        isSearchMode
+                          ? "bg-black text-white border-black"
+                          : "border-[#e4d7c8] text-gray-500 bg-white"
+                      }`}
+                    >
+                      <Globe size={13} />
                     </button>
                   </div>
 
@@ -1485,7 +1563,7 @@ export default function App() {
                       }
                     }}
                     placeholder={
-                      isLoading ? "BeeBot 正在思考中..." : "Ask anything"
+                      isLoading ? "正在思考中..." : "Ask anything"
                     }
                     disabled={isLoading}
                     className="flex-1 bg-transparent border-none outline-none text-[14px] sm:text-[15px] placeholder:text-gray-400"
@@ -1700,8 +1778,8 @@ export default function App() {
       )}
 
       {isDeleteModalOpen && deleteTargetSession && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-md m-4 rounded-3xl shadow-2xl overflow-hidden p-6">
             <div className="flex items-center mb-4">
               <div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-50 text-red-500 mr-3">
                 <Trash2 size={18} />
@@ -1715,25 +1793,25 @@ export default function App() {
                 </p>
               </div>
             </div>
-            <div className="mb-5 text-sm text-gray-700">
+            <div className="mb-6 text-sm text-gray-700">
               确定要删除「
               <span className="font-medium">
                 {deleteTargetSession.title || "此聊天"}
               </span>
               」的聊天记录吗？
             </div>
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-3">
               <button
                 type="button"
                 onClick={closeDeleteModal}
-                className="px-4 py-2 rounded-lg text-sm border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+                className="px-5 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
               >
                 取消
               </button>
               <button
                 type="button"
                 onClick={handleConfirmDeleteSession}
-                className="px-4 py-2 rounded-lg text-sm bg-red-500 text-white hover:bg-red-600 transition-colors"
+                className="px-5 py-2.5 rounded-xl text-sm font-medium bg-red-500 text-white shadow-lg shadow-red-500/20 hover:bg-red-600 hover:shadow-xl hover:shadow-red-500/30 transition-all transform hover:-translate-y-0.5"
               >
                 删除
               </button>

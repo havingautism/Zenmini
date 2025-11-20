@@ -31,9 +31,7 @@ export default function LoadingMessage({ isThinking = false }) {
               <Brain className="animate-pulse" size={20} />
             </div>
             <div className="flex flex-col">
-              <span className="text-xs uppercase tracking-wide opacity-80 mb-1">
-                BeeBot 正在深度思考
-              </span>
+              
               <span className="text-sm font-medium">{text}</span>
               <div className="mt-2 flex items-center space-x-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-white/70 animate-bounce" style={{ animationDelay: "0s" }} />
