@@ -11,7 +11,7 @@
 
 一个基于 Google Gemini API 的现代化 AI 对话应用
 
-[在线体验](https://havingautism.github.io/gemini_chat/) | [报告问题](https://github.com/havingautism/gemini_chat/issues) | [贡献指南](CONTRIBUTING.md)
+[在线体验](https://havingautism.github.io/Zenmini/) | [报告问题](https://github.com/havingautism/gemini_chat/issues) | [贡献指南](CONTRIBUTING.md)
 
 </div>
 
