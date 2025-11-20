@@ -1,7 +1,24 @@
 {
-  "name": "gemini_chat",
+  "name": "zenmini",
+  "version": "0.1.0",
+  "description": "A modern AI chat application powered by Google Gemini - Simple, Elegant, Powerful",
+  "author": "havingautism",
+  "license": "CC-BY-NC-SA-4.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/havingautism/gemini_chat.git"
+  },
+  "homepage": "https://havingautism.github.io/gemini_chat/",
+  "keywords": [
+    "ai",
+    "chat",
+    "gemini",
+    "google",
+    "react",
+    "vite",
+    "supabase"
+  ],
   "private": true,
-  "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

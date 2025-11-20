@@ -1530,16 +1530,16 @@ export default function App() {
             </div>
 
             {/* 底部提示条（首屏时显示） */}
-            {messages.length === 0 && (
+            {/* {messages.length === 0 && (
               <div className="w-full max-w-xl mb-4">
                 <div className="mx-auto rounded-full bg-[#f2ebe2] px-5 py-3 text-[11px] text-gray-600 text-center shadow-sm">
-                  You’ve hit the Free plan limit for BeeBot.
+                  You’ve hit the Free plan limit for Zenmini.
                   <span className="block text-gray-500 mt-0.5">
                     Responses may be slower until your limit resets.
                   </span>
                 </div>
               </div>
-            )}
+            )} */}
 
             {/* 建议问句 + 输入区域 */}
             <div className="w-full max-w-3xl">

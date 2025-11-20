@@ -1,5 +1,5 @@
 import React from "react";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Sparkles, Loader2, X } from "lucide-react";
 import MarkdownRenderer from "./MarkdownRenderer";
 export default function SummaryModal({ content, isLoading, onClose }) {
   return (
