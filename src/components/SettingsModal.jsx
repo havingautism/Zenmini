@@ -23,6 +23,7 @@ export default function SettingsModal({
   onSave,
   isAutoPlayTts,
   onToggleAutoPlayTts,
+  onTestSchema,
 }) {
   const [activeTab, setActiveTab] = useState("general");
   const [localGeminiKey, setLocalGeminiKey] = useState(currentGeminiApiKey);
@@ -422,6 +423,14 @@ export default function SettingsModal({
                             icon={<KeyRound size={16} />}
                             isPassword
                           />
+                          {/* <div className="pt-2 flex justify-end">
+                            <button
+                              onClick={onTestSchema}
+                              className="text-xs text-gray-500 hover:text-black underline transition-colors"
+                            >
+                              测试初始化步骤
+                            </button>
+                          </div> */}
                         </div>
                       );
                     })()}
