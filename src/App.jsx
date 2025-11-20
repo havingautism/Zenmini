@@ -47,7 +47,7 @@ import {
   loadSupabaseConfigFromLocalStorage,
   getOrCreateClientId,
 } from "./services/supabase";
-import { initSchemaIfFirstUse } from "./services/schema";
+import { initSchemaIfFirstUse, getSchemaSql } from "./services/schema";
 import {
   subscribeSessions,
   subscribeMessages,
@@ -1236,6 +1236,12 @@ export default function App() {
     }
   };
 
+  const handleTestSchema = () => {
+    setSchemaSql(getSchemaSql());
+    setNeedsSchemaInit(true);
+    setIsSettingsModalOpen(false);
+  };
+
   return (
     <div className="h-screen w-full bg-gray-100 flex items-center justify-center p-2 text-gray-900">
       <div className="relative flex w-full  h-full  bg-white rounded-4xl shadow-soft-card border border-gray-200 overflow-hidden">
@@ -1817,17 +1823,26 @@ export default function App() {
             try {
               localStorage.setItem("userApiKey", newGeminiKey);
             } catch {}
+            
+            // Check if Supabase config has changed
+            const isSbConfigChanged = JSON.stringify(newSbConfig) !== JSON.stringify(localSbConfig);
+            
             setLocalSbConfig(newSbConfig);
             try {
               localStorage.setItem(
                 "supabaseConfig",
                 JSON.stringify(newSbConfig)
               );
+              // If config changed, clear init flag to force schema check
+              if (isSbConfigChanged) {
+                localStorage.removeItem("sb_inited");
+              }
             } catch {}
             await initApp();
           }}
           isAutoPlayTts={isAutoPlayTts}
           onToggleAutoPlayTts={() => setIsAutoPlayTts((prev) => !prev)}
+          onTestSchema={handleTestSchema}
         />
       )}
 
