@@ -107,13 +107,25 @@ async function callGeminiApi(
 
       // 处理 grounding metadata
       const groundingMetadata = candidate.groundingMetadata;
-      if (groundingMetadata && groundingMetadata.groundingAttributions) {
-        sources = groundingMetadata.groundingAttributions
-          .map((attribution) => ({
-            uri: attribution.web?.uri,
-            title: attribution.web?.title,
-          }))
-          .filter((source) => source.uri && source.title);
+      if (groundingMetadata) {
+        // Try groundingChunks first (new API format)
+        if (Array.isArray(groundingMetadata.groundingChunks)) {
+          sources = groundingMetadata.groundingChunks
+            .map((chunk) => ({
+              uri: chunk.web?.uri,
+              title: chunk.web?.title,
+            }))
+            .filter((source) => source.uri && source.title);
+        }
+        // Fallback to groundingAttributions (old API format)
+        else if (Array.isArray(groundingMetadata.groundingAttributions)) {
+          sources = groundingMetadata.groundingAttributions
+            .map((attribution) => ({
+              uri: attribution.web?.uri,
+              title: attribution.web?.title,
+            }))
+            .filter((source) => source.uri && source.title);
+        }
       }
 
       return {

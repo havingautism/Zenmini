@@ -2,5 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-/* App-wide tweaks can go here if needed */
+/* App-wide base styles */
+body {
+  /* 这里不用 @apply bg-shell，避免 Tailwind 报未定义 */
+  background-color: #f5f3f0;
+  @apply font-sans text-[15px] text-gray-900;
+}
+
+#root {
+  @apply min-h-screen flex items-stretch justify-center;
+}
 
