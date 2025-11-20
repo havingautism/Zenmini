@@ -100,7 +100,14 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash"); // 默认选择flash
+  const [selectedModel, setSelectedModel] = useState(() => {
+    try {
+      const saved = localStorage.getItem("selectedModel");
+      return saved || "gemini-2.5-flash";
+    } catch {
+      return "gemini-2.5-flash";
+    }
+  });
   const [isThinkingMode, setIsThinkingMode] = useState(true);
   const [isSearchMode, setIsSearchMode] = useState(true);
   const [isUploadMenuOpen, setIsUploadMenuOpen] = useState(false);
@@ -163,17 +170,27 @@ export default function App() {
 
   useEffect(() => {
     if (!isModelMenuOpen) return;
-    const handleClickOutside = (event) => {
-      if (
-        modelMenuRef.current &&
-        !modelMenuRef.current.contains(event.target)
-      ) {
-        setIsModelMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
+    
+    // Add a small delay before enabling click-outside-to-close
+    // to prevent immediate closing when opening the menu
+    const timeoutId = setTimeout(() => {
+      const handleClickOutside = (event) => {
+        if (
+          modelMenuRef.current &&
+          !modelMenuRef.current.contains(event.target)
+        ) {
+          setIsModelMenuOpen(false);
+        }
+      };
+      document.addEventListener("mousedown", handleClickOutside);
+      
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }, 100);
+    
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      clearTimeout(timeoutId);
     };
   }, [isModelMenuOpen]);
 
@@ -199,6 +216,13 @@ export default function App() {
 
     autoInitAndSignIn();
   }, []);
+
+  // 保存选中的模型到 localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem("selectedModel", selectedModel);
+    } catch {}
+  }, [selectedModel]);
 
   // 会话列表监听
   useEffect(() => {
@@ -476,7 +500,7 @@ export default function App() {
     setIsSessionActive(true);
 
     const userMessage = {
-      id: `user-${Date.now()}`,
+      id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `user-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       role: "user",
       content: trimmed,
       created_at: new Date().toISOString(),
@@ -521,7 +545,7 @@ export default function App() {
 
       const modelToUse = selectedModel;
 
-      modelMessageId = `model-${Date.now()}`;
+      modelMessageId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `model-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       modelCreatedAt = new Date().toISOString();
       setMessages((prev) => [
         ...prev,
@@ -606,16 +630,25 @@ export default function App() {
         }
 
         const groundingMetadata = candidate && candidate.groundingMetadata;
-        if (
-          groundingMetadata &&
-          Array.isArray(groundingMetadata.groundingAttributions)
-        ) {
-          sources = groundingMetadata.groundingAttributions
-            .map((attribution) => ({
-              uri: attribution.web?.uri,
-              title: attribution.web?.title,
-            }))
-            .filter((s) => s.uri && s.title);
+        if (groundingMetadata) {
+          // Try groundingChunks first (new API format)
+          if (Array.isArray(groundingMetadata.groundingChunks)) {
+            sources = groundingMetadata.groundingChunks
+              .map((chunk) => ({
+                uri: chunk.web?.uri,
+                title: chunk.web?.title,
+              }))
+              .filter((s) => s.uri && s.title);
+          }
+          // Fallback to groundingAttributions (old API format)
+          else if (Array.isArray(groundingMetadata.groundingAttributions)) {
+            sources = groundingMetadata.groundingAttributions
+              .map((attribution) => ({
+                uri: attribution.web?.uri,
+                title: attribution.web?.title,
+              }))
+              .filter((s) => s.uri && s.title);
+          }
         }
       }
 
@@ -655,29 +688,33 @@ export default function App() {
         setSuggestedReplies([]);
       }
 
-      setTimeout(() => {
+      setTimeout(async () => {
         // 在完成整个流式响应后，再统一持久化用户消息和模型消息
-        addUserMessage(
-          db,
-          appId,
-          userId,
-          currentSessionId,
-          trimmed,
-          userMessage.created_at
-        ).catch((e) => console.error("Failed to save user message:", e));
+        // 先保存用户消息，再保存模型消息，确保顺序正确
+        try {
+          await addUserMessage(
+            db,
+            appId,
+            userId,
+            currentSessionId,
+            trimmed,
+            userMessage.created_at
+          );
 
-        const messageData = {
-          content: fullText,
-          thinkingProcess,
-          sources: sources || [],
-          suggestedReplies,
-          generatedWithThinking: !!thinkingProcess,
-          generatedWithSearch: isSearchMode,
-        };
+          const messageData = {
+            content: fullText,
+            thinkingProcess,
+            sources: sources || [],
+            suggestedReplies,
+            generatedWithThinking: !!thinkingProcess,
+            generatedWithSearch: isSearchMode,
+            createdAt: modelCreatedAt,
+          };
 
-        addModelMessage(db, appId, userId, currentSessionId, messageData).catch(
-          (e) => console.error("Failed to save model message:", e)
-        );
+          await addModelMessage(db, appId, userId, currentSessionId, messageData);
+        } catch (e) {
+          console.error("Failed to save messages:", e);
+        }
       }, 200);
 
       if (isAutoPlayTts && fullText) {
@@ -718,7 +755,7 @@ export default function App() {
         return [
           ...cleaned,
           {
-            id: `error-${Date.now()}`,
+            id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `error-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             role: "model",
             content: "抱歉，发送消息时出错，请重试。",
             created_at: new Date().toISOString(),
@@ -1060,7 +1097,7 @@ export default function App() {
       const baseMessages = messages.slice(0, lastUserMessageIndex + 1);
 
       // 删除本地 UI 中最后一条用户消息之后的所有模型回复
-      modelMessageId = `model-${Date.now()}`;
+      modelMessageId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `model-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       modelCreatedAt = new Date().toISOString();
       setMessages([
         ...baseMessages,
@@ -1083,13 +1120,25 @@ export default function App() {
       }));
 
       const messagesToDelete = messages.slice(lastUserMessageIndex + 1);
-      await deleteMessages(
-        db,
-        appId,
-        userId,
-        activeSessionId,
-        messagesToDelete.map((m) => m.id)
-      );
+      // 只删除有效UUID格式的消息（过滤掉临时错误消息等）
+      const validMessageIds = messagesToDelete
+        .map((m) => m.id)
+        .filter((id) => {
+          // 检查是否为UUID格式（简单检查：包含连字符且不以error-/user-/model-开头）
+          // 或者是新格式的UUID（crypto.randomUUID生成的）
+          const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          return uuidPattern.test(id);
+        });
+      
+      if (validMessageIds.length > 0) {
+        await deleteMessages(
+          db,
+          appId,
+          userId,
+          activeSessionId,
+          validMessageIds
+        );
+      }
 
       const modelToUse = selectedModel;
       const aiResponse = await callGeminiApi(
@@ -1175,7 +1224,7 @@ export default function App() {
         return [
           ...cleaned,
           {
-            id: `error-${Date.now()}`,
+            id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `error-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             role: "model",
             content: "抱歉，重新生成回答时出错，请重试。",
             created_at: new Date().toISOString(),
@@ -1637,7 +1686,9 @@ export default function App() {
 
                 {/* 模型选择弹层 */}
                 {isModelMenuOpen && (
-                  <div className="absolute bottom-full right-0 mb-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-20">
+                  <div 
+                    className="absolute bottom-full right-0 mb-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-50"
+                  >
                     <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
                       <span className="flex items-center justify-center w-5 h-5 rounded-full ">
                         <img
@@ -1652,7 +1703,8 @@ export default function App() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setSelectedModel("gemini-2.5-flash");
                         setIsModelMenuOpen(false);
                       }}
@@ -1676,7 +1728,8 @@ export default function App() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setSelectedModel("gemini-2.5-pro");
                         setIsModelMenuOpen(false);
                       }}

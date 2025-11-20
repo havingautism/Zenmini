@@ -162,7 +162,7 @@ export default function MessageItem({
             )}
 
             {msg.sources && msg.sources.length > 0 && (
-              <div className="mt-3 pt-2 border-t border-[#f0e6da]">
+              <div className="mt-5 pt-3 border-t border-[#f0e6da]">
                 <button
                   className="flex justify-between items-center w-full text-xs font-semibold mb-1 opacity-80"
                   onClick={() =>
