@@ -1601,8 +1601,14 @@ export default function App() {
                   </div>
 
                   {/* 输入框本体 */}
-                  <input
-                    type="text"
+                  <textarea
+                    ref={(el) => {
+                      if (el) {
+                        // Auto-resize textarea
+                        el.style.height = 'auto';
+                        el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+                      }
+                    }}
                     value={currentInput}
                     onChange={(e) => {
                       setCurrentInput(e.target.value);
@@ -1611,11 +1617,18 @@ export default function App() {
                         setIsUploadMenuOpen(false);
                       }
                     }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage(e);
+                      }
+                    }}
                     placeholder={
                       isLoading ? "正在思考中..." : "Ask anything"
                     }
                     disabled={isLoading}
-                    className="flex-1 bg-transparent border-none outline-none text-[14px] sm:text-[15px] placeholder:text-gray-400"
+                    rows={1}
+                    className="flex-1 bg-transparent border-none outline-none text-[14px] sm:text-[15px] placeholder:text-gray-400 resize-none overflow-y-auto max-h-[200px]"
                   />
 
                   {/* 模型小标签（桌面显示） */}
