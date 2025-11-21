@@ -48,7 +48,7 @@ async function callGeminiApi(
   }
 
   if (isSearchEnabled) {
-    payload.tools = [{ google_search: {} }];
+    payload.tools = [{ googleSearch: {} }];
   }
 
   if (systemInstructions.length > 0) {
@@ -71,6 +71,7 @@ async function callGeminiApi(
       let thinkingProcess = null;
       let finalAnswer = "";
       let sources = [];
+      let groundingMetadata = null;
 
       // 处理思考模式的响应
       if (isThinkingEnabled) {
@@ -106,11 +107,14 @@ async function callGeminiApi(
       }
 
       // 处理 grounding metadata
-      const groundingMetadata = candidate.groundingMetadata;
-      if (groundingMetadata) {
+      const rawGroundingMetadata = candidate.groundingMetadata;
+      if (rawGroundingMetadata) {
+        // Sanitize for database storage
+        groundingMetadata = JSON.parse(JSON.stringify(rawGroundingMetadata));
+        
         // Try groundingChunks first (new API format)
-        if (Array.isArray(groundingMetadata.groundingChunks)) {
-          sources = groundingMetadata.groundingChunks
+        if (Array.isArray(rawGroundingMetadata.groundingChunks)) {
+          sources = rawGroundingMetadata.groundingChunks
             .map((chunk) => ({
               uri: chunk.web?.uri,
               title: chunk.web?.title,
@@ -118,8 +122,8 @@ async function callGeminiApi(
             .filter((source) => source.uri && source.title);
         }
         // Fallback to groundingAttributions (old API format)
-        else if (Array.isArray(groundingMetadata.groundingAttributions)) {
-          sources = groundingMetadata.groundingAttributions
+        else if (Array.isArray(rawGroundingMetadata.groundingAttributions)) {
+          sources = rawGroundingMetadata.groundingAttributions
             .map((attribution) => ({
               uri: attribution.web?.uri,
               title: attribution.web?.title,
@@ -132,6 +136,7 @@ async function callGeminiApi(
         text: finalAnswer,
         thinkingProcess: thinkingProcess || undefined,
         sources,
+        groundingMetadata: groundingMetadata || undefined,
       };
     } else {
       return {

@@ -93,6 +93,7 @@ async function addModelMessageSB(supabase, appId, clientId, sessionId, payload) 
     sources: sources || [],
     generated_with_thinking: !!generatedWithThinking,
     generated_with_search: !!generatedWithSearch,
+    grounding_metadata: payload.groundingMetadata || null,
   }
   if (createdAt) {
     messageData.created_at = createdAt
@@ -117,7 +118,7 @@ async function addModelMessageSB(supabase, appId, clientId, sessionId, payload) 
     console.warn('Database field error, attempting to save without problematic fields:', error.message)
 
     // 移除可能不存在的字段
-    const fieldsToCheck = ['suggested_replies', 'thinking_process']
+    const fieldsToCheck = ['suggested_replies', 'thinking_process', 'grounding_metadata']
     for (const field of fieldsToCheck) {
       if (error.message.includes(field) && messageData[field] !== undefined) {
         console.warn(`${field} field not found in database, saving without it`)

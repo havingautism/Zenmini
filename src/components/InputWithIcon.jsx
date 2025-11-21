@@ -16,7 +16,7 @@ export default function InputWithIcon({ id, name, label, value, onChange, icon, 
           type={isPassword ? 'password' : 'text'}
           value={value}
           onChange={onChange}
-          className="w-full p-2 pl-10 text-sm bg-gray-100 rounded-md border-gray-200 shadow-inner focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full p-2 pl-10 text-sm bg-gray-100 rounded-md border-gray-200 shadow-inner focus:outline-none "
         />
       </div>
     </div>

@@ -62,7 +62,9 @@ import MessageItem from "./components/MessageItem";
 import SummaryModal from "./components/SummaryModal";
 import SettingsModal from "./components/SettingsModal";
 import SchemaInitModal from "./components/SchemaInitModal";
+import Loader from "./components/Loader";
 import SuggestedReplyMarkdown from "./components/SuggestedReplyMarkdown";
+
 
 export default function App() {
   const [client, setClient] = useState(null);
@@ -193,6 +195,10 @@ export default function App() {
       clearTimeout(timeoutId);
     };
   }, [isModelMenuOpen]);
+
+  useEffect(() => {
+    localStorage.setItem("selectedModel", selectedModel);
+  }, [selectedModel]);
 
   useEffect(() => {
     try {
@@ -550,6 +556,7 @@ export default function App() {
       setMessages((prev) => [
         ...prev,
         {
+
           id: modelMessageId,
           role: "model",
           content: "",
@@ -591,162 +598,173 @@ export default function App() {
       }
 
       if (isSearchMode) {
-        params.tools = [{ google_search: {} }];
+        params.config.tools = [{ googleSearch: {} }];
       }
+
       console.log("params", params);
-      const stream = await aiClient.models.generateContentStream(params);
 
-      let fullText = "";
-      const thoughtParts = [];
-      let sources = [];
-
-      for await (const chunk of stream) {
-        const delta = chunk.text || "";
-        if (delta) {
-          fullText += delta;
-
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === modelMessageId ? { ...m, content: fullText } : m
-            )
-          );
-        }
-
-        const candidate =
-          chunk.candidates && chunk.candidates.length > 0
-            ? chunk.candidates[0]
-            : null;
-
-        if (
-          candidate &&
-          candidate.content &&
-          Array.isArray(candidate.content.parts)
-        ) {
-          candidate.content.parts.forEach((part) => {
-            if (part.thought && part.text) {
-              thoughtParts.push(part.text);
-            }
-          });
-        }
-
-        const groundingMetadata = candidate && candidate.groundingMetadata;
-        if (groundingMetadata) {
-          // Try groundingChunks first (new API format)
-          if (Array.isArray(groundingMetadata.groundingChunks)) {
-            sources = groundingMetadata.groundingChunks
-              .map((chunk) => ({
-                uri: chunk.web?.uri,
-                title: chunk.web?.title,
-              }))
-              .filter((s) => s.uri && s.title);
-          }
-          // Fallback to groundingAttributions (old API format)
-          else if (Array.isArray(groundingMetadata.groundingAttributions)) {
-            sources = groundingMetadata.groundingAttributions
-              .map((attribution) => ({
-                uri: attribution.web?.uri,
-                title: attribution.web?.title,
-              }))
-              .filter((s) => s.uri && s.title);
-          }
-        }
-      }
-
-      const thinkingProcess =
-        thoughtParts.length > 0 ? thoughtParts.join("").trim() || null : null;
-
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === modelMessageId
-            ? {
-                ...m,
-                content: fullText,
-                thinkingProcess,
-                sources: sources || [],
-                generatedWithThinking: !!thinkingProcess,
-                generatedWithSearch: isSearchMode,
-                isLoading: false,
-              }
-            : m
-        )
-      );
-
-      const finalHistoryForReplies = [
-        ...historyForApi,
-        { role: "model", parts: [{ text: fullText }] },
-      ];
-
-      let suggestedReplies = [];
-      try {
-        suggestedReplies = await fetchSuggestedReplies(
-          finalHistoryForReplies,
-          false
-        );
-        setSuggestedReplies(suggestedReplies);
-      } catch (e) {
-        console.error("Failed to fetch suggested replies:", e);
-        setSuggestedReplies([]);
-      }
-
-      setTimeout(async () => {
-        // 在完成整个流式响应后，再统一持久化用户消息和模型消息
-        // 先保存用户消息，再保存模型消息，确保顺序正确
+    
+        let stream;
         try {
-          await addUserMessage(
-            db,
-            appId,
-            userId,
-            currentSessionId,
-            trimmed,
-            userMessage.created_at
-          );
-
-          const messageData = {
-            content: fullText,
-            thinkingProcess,
-            sources: sources || [],
-            suggestedReplies,
-            generatedWithThinking: !!thinkingProcess,
-            generatedWithSearch: isSearchMode,
-            createdAt: modelCreatedAt,
-          };
-
-          await addModelMessage(db, appId, userId, currentSessionId, messageData);
+          stream = await aiClient.models.generateContentStream(params);
         } catch (e) {
-          console.error("Failed to save messages:", e);
+          throw e;
         }
-      }, 200);
 
-      if (isAutoPlayTts && fullText) {
-        handleStopAudio();
-        try {
-          const { audioData, mimeType } = await callGeminiTtsApi(
-            fullText,
-            userApiKey
-          );
-          if (!mimeType.includes("rate="))
-            throw new Error("Invalid TTS mimeType");
-          const sampleRate = parseInt(mimeType.match(/rate=(\d+)/)[1], 10);
-          const pcmData = base64ToArrayBuffer(audioData);
-          const pcm16 = new Int16Array(pcmData);
-          const wavBlob = pcmToWav(pcm16, sampleRate);
-          const audioUrl = URL.createObjectURL(wavBlob);
-          const audio = new Audio(audioUrl);
-          setCurrentAudio(audio);
-          setPlayingMessageId("auto-play");
-          audio.play();
-          audio.onended = () => {
-            setPlayingMessageId(null);
-            setCurrentAudio(null);
-            URL.revokeObjectURL(audioUrl);
-          };
-        } catch (ttsError) {
-          console.error("Auto-play TTS failed:", ttsError);
-          if (currentAudio) currentAudio.pause();
-          setCurrentAudio(null);
-          setPlayingMessageId(null);
+        let fullText = "";
+        const thoughtParts = [];
+        let sources = [];
+        let finalGroundingMetadata = null;
+
+        for await (const chunk of stream) {
+
+          const delta = chunk.text || "";
+          if (delta) {
+            fullText += delta;
+
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === modelMessageId ? { ...m, content: fullText } : m
+              )
+            );
+          }
+
+          const candidate =
+            chunk.candidates && chunk.candidates.length > 0
+              ? chunk.candidates[0]
+              : null;
+
+         
+
+          if (
+            candidate &&
+            candidate.content &&
+            Array.isArray(candidate.content.parts)
+          ) {
+            candidate.content.parts.forEach((part) => {
+              if (part.thought && part.text) {
+                thoughtParts.push(part.text);
+              }
+            });
+          }
+
+          const groundingMetadata = candidate && candidate.groundingMetadata;
+          if (groundingMetadata) {
+            finalGroundingMetadata = JSON.parse(JSON.stringify(groundingMetadata));
+            if (Array.isArray(groundingMetadata.groundingChunks)) {
+              sources = groundingMetadata.groundingChunks
+                .map((chunk) => ({
+                  uri: chunk.web?.uri,
+                  title: chunk.web?.title,
+                }))
+                .filter((s) => s.uri && s.title);
+            } else if (Array.isArray(groundingMetadata.groundingAttributions)) {
+              sources = groundingMetadata.groundingAttributions
+                .map((attribution) => ({
+                  uri: attribution.web?.uri,
+                  title: attribution.web?.title,
+                }))
+                .filter((s) => s.uri && s.title);
+            }
+          }
         }
-      }
+
+        const thinkingProcess =
+          thoughtParts.length > 0 ? thoughtParts.join("").trim() || null : null;
+
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === modelMessageId
+              ? {
+                  ...m,
+                  content: fullText,
+                  thinkingProcess,
+                  sources: sources || [],
+                  groundingMetadata: finalGroundingMetadata || null,
+                  generatedWithThinking: !!thinkingProcess,
+                  generatedWithSearch: isSearchMode,
+                  isLoading: false,
+                }
+              : m
+          )
+        );
+
+        const finalHistoryForReplies = [
+          ...historyForApi,
+          { role: "model", parts: [{ text: fullText }] },
+        ];
+
+        let suggestedReplies = [];
+        try {
+          suggestedReplies = await fetchSuggestedReplies(
+            finalHistoryForReplies,
+            false
+          );
+          setSuggestedReplies(suggestedReplies);
+        } catch (e) {
+          console.error("Failed to fetch suggested replies:", e);
+          setSuggestedReplies([]);
+        }
+
+        setTimeout(async () => {
+          try {
+            await addUserMessage(
+              db,
+              appId,
+              userId,
+              currentSessionId,
+              trimmed,
+              userMessage.created_at
+            );
+
+            const messageData = {
+              content: fullText,
+              thinkingProcess,
+              sources: sources || [],
+              suggestedReplies,
+              generatedWithThinking: !!thinkingProcess,
+              generatedWithSearch: isSearchMode,
+              groundingMetadata: finalGroundingMetadata || null,
+              createdAt: modelCreatedAt,
+            };
+
+            await addModelMessage(db, appId, userId, currentSessionId, messageData);
+          } catch (e) {
+            console.error("Failed to save messages:", e);
+          }
+        }, 200);
+
+        if (isAutoPlayTts && fullText) {
+          handleStopAudio();
+          try {
+            const { audioData, mimeType } = await callGeminiTtsApi(
+              fullText,
+              userApiKey
+            );
+            if (!mimeType.includes("rate="))
+              throw new Error("Invalid TTS mimeType");
+            const sampleRate = parseInt(mimeType.match(/rate=(\d+)/)[1], 10);
+            const pcmData = base64ToArrayBuffer(audioData);
+            const pcm16 = new Int16Array(pcmData);
+            const wavBlob = pcmToWav(pcm16, sampleRate);
+            const audioUrl = URL.createObjectURL(wavBlob);
+            const audio = new Audio(audioUrl);
+            setCurrentAudio(audio);
+            setPlayingMessageId("auto-play");
+            audio.play();
+            audio.onended = () => {
+              setPlayingMessageId(null);
+              setCurrentAudio(null);
+              URL.revokeObjectURL(audioUrl);
+            };
+          } catch (ttsError) {
+            console.error("Auto-play TTS failed:", ttsError);
+            if (currentAudio) currentAudio.pause();
+            setCurrentAudio(null);
+            setPlayingMessageId(null);
+          }
+        }
+      
     } catch (error) {
       console.error("Error sending message:", error);
       setMessages((prev) => {
@@ -874,16 +892,7 @@ export default function App() {
           createdAt: modelMessage.created_at,
         };
 
-        // 临时调试日志
-        console.log("保存到数据库的消息数据:", {
-          hasThinkingProcess: !!messageData.thinkingProcess,
-          thinkingProcessLength: messageData.thinkingProcess
-            ? messageData.thinkingProcess.length
-            : 0,
-          hasSuggestedReplies:
-            messageData.suggestedReplies &&
-            messageData.suggestedReplies.length > 0,
-        });
+   
 
         addModelMessage(db, appId, userId, currentSessionId, messageData).catch(
           (e) => console.error("Failed to save model message:", e)
@@ -1141,81 +1150,187 @@ export default function App() {
       }
 
       const modelToUse = selectedModel;
-      const aiResponse = await callGeminiApi(
-        historyForApi,
-        modelToUse,
-        isSearchMode,
-        isThinkingMode,
-        userApiKey
-      );
-      // 使用API返回的结构化数据，无需正则表达式解析
-      const thinkingProcess = aiResponse.thinkingProcess;
-      const finalAnswer = aiResponse.text;
 
-      const finalSources = aiResponse.sources || [];
-
-      // 更新本地占位气泡为最终结果
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === modelMessageId
-            ? {
-                ...m,
-                content: finalAnswer,
-                thinkingProcess,
-                sources: finalSources,
-                generatedWithThinking: !!thinkingProcess,
-                generatedWithSearch: isSearchMode,
-                isLoading: false,
-              }
-            : m
-        )
-      );
-
-      await addModelMessage(db, appId, userId, activeSessionId, {
-        content: finalAnswer,
-        thinkingProcess,
-        sources: finalSources,
-        generatedWithThinking: !!thinkingProcess,
-        generatedWithSearch: isSearchMode,
-        createdAt: modelCreatedAt,
+      const aiClient = new GoogleGenAI({
+        apiKey: userApiKey || "",
       });
 
-      const finalHistoryForReplies = [
-        ...historyForApi,
-        { role: "model", parts: [{ text: finalAnswer }] },
-      ];
-      fetchSuggestedReplies(finalHistoryForReplies);
+      const params = {
+        model: modelToUse,
+        contents: historyForApi,
+      };
 
-      if (isAutoPlayTts && finalAnswer) {
-        handleStopAudio();
-        try {
-          const { audioData, mimeType } = await callGeminiTtsApi(
-            finalAnswer,
-            userApiKey
-          );
-          if (!mimeType.includes("rate="))
-            throw new Error("Invalid TTS mimeType");
-          const sampleRate = parseInt(mimeType.match(/rate=(\d+)/)[1], 10);
-          const pcmData = base64ToArrayBuffer(audioData);
-          const pcm16 = new Int16Array(pcmData);
-          const wavBlob = pcmToWav(pcm16, sampleRate);
-          const audioUrl = URL.createObjectURL(wavBlob);
-          const audio = new Audio(audioUrl);
-          setCurrentAudio(audio);
-          setPlayingMessageId("auto-play");
-          audio.play();
-          audio.onended = () => {
-            setPlayingMessageId(null);
-            setCurrentAudio(null);
-            URL.revokeObjectURL(audioUrl);
-          };
-        } catch (ttsError) {
-          console.error("Auto-play TTS failed:", ttsError);
-          if (currentAudio) currentAudio.pause();
-          setCurrentAudio(null);
-          setPlayingMessageId(null);
-        }
+      const systemInstructions = [
+        "Respond *only* with the plain text answer. Do not include pinyin, romanization, or automatic translations unless the user explicitly asks for them.",
+      ];
+
+      if (systemInstructions.length > 0) {
+        params.systemInstruction = {
+          parts: [{ text: systemInstructions.join(" ") }],
+        };
       }
+
+      if (isThinkingMode) {
+        params.config = {
+          thinkingConfig: {
+            thinkingBudget: -1,
+            includeThoughts: true,
+          },
+        };
+      }
+
+      if (isSearchMode) {
+        params.config.tools = [{ googleSearch: {} }];
+      }
+
+      console.log("Regenerate params", params);
+
+        const stream = await aiClient.models.generateContentStream(params);
+
+        let fullText = "";
+        const thoughtParts = [];
+        let sources = [];
+        let finalGroundingMetadata = null;
+
+        for await (const chunk of stream) {
+
+          const delta = chunk.text || "";
+          if (delta) {
+            fullText += delta;
+
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === modelMessageId ? { ...m, content: fullText } : m
+              )
+            );
+          }
+
+          const candidate =
+            chunk.candidates && chunk.candidates.length > 0
+              ? chunk.candidates[0]
+              : null;
+
+        
+          if (
+            candidate &&
+            candidate.content &&
+            Array.isArray(candidate.content.parts)
+          ) {
+            candidate.content.parts.forEach((part) => {
+              if (part.thought && part.text) {
+                thoughtParts.push(part.text);
+              }
+            });
+          }
+
+          const groundingMetadata = candidate && candidate.groundingMetadata;
+          if (groundingMetadata) {
+            finalGroundingMetadata = JSON.parse(JSON.stringify(groundingMetadata));
+            if (Array.isArray(groundingMetadata.groundingChunks)) {
+              sources = groundingMetadata.groundingChunks
+                .map((chunk) => ({
+                  uri: chunk.web?.uri,
+                  title: chunk.web?.title,
+                }))
+                .filter((s) => s.uri && s.title);
+            } else if (Array.isArray(groundingMetadata.groundingAttributions)) {
+              sources = groundingMetadata.groundingAttributions
+                .map((attribution) => ({
+                  uri: attribution.web?.uri,
+                  title: attribution.web?.title,
+                }))
+                .filter((s) => s.uri && s.title);
+            }
+          }
+        }
+
+        const thinkingProcess =
+          thoughtParts.length > 0 ? thoughtParts.join("").trim() || null : null;
+
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === modelMessageId
+              ? {
+                  ...m,
+                  content: fullText,
+                  thinkingProcess,
+                  sources: sources || [],
+                  groundingMetadata: finalGroundingMetadata || null,
+                  generatedWithThinking: !!thinkingProcess,
+                  generatedWithSearch: isSearchMode,
+                  isLoading: false,
+                }
+              : m
+          )
+        );
+
+        const finalHistoryForReplies = [
+          ...historyForApi,
+          { role: "model", parts: [{ text: fullText }] },
+        ];
+
+        let suggestedReplies = [];
+        try {
+          suggestedReplies = await fetchSuggestedReplies(
+            finalHistoryForReplies,
+            false
+          );
+          setSuggestedReplies(suggestedReplies);
+        } catch (e) {
+          console.error("Failed to fetch suggested replies:", e);
+          setSuggestedReplies([]);
+        }
+
+        setTimeout(async () => {
+          try {
+            const messageData = {
+              content: fullText,
+              thinkingProcess,
+              sources: sources || [],
+              suggestedReplies,
+              generatedWithThinking: !!thinkingProcess,
+              generatedWithSearch: isSearchMode,
+              groundingMetadata: finalGroundingMetadata || null,
+              createdAt: modelCreatedAt,
+            };
+
+            await addModelMessage(db, appId, userId, activeSessionId, messageData);
+          } catch (e) {
+            console.error("Failed to save regenerated message:", e);
+          }
+        }, 200);
+
+        if (isAutoPlayTts && fullText) {
+          handleStopAudio();
+          try {
+            const { audioData, mimeType } = await callGeminiTtsApi(
+              fullText,
+              userApiKey
+            );
+            if (!mimeType.includes("rate="))
+              throw new Error("Invalid TTS mimeType");
+            const sampleRate = parseInt(mimeType.match(/rate=(\d+)/)[1], 10);
+            const pcmData = base64ToArrayBuffer(audioData);
+            const pcm16 = new Int16Array(pcmData);
+            const wavBlob = pcmToWav(pcm16, sampleRate);
+            const audioUrl = URL.createObjectURL(wavBlob);
+            const audio = new Audio(audioUrl);
+            setCurrentAudio(audio);
+            setPlayingMessageId("auto-play");
+            audio.play();
+            audio.onended = () => {
+              setPlayingMessageId(null);
+              setCurrentAudio(null);
+              URL.revokeObjectURL(audioUrl);
+            };
+          } catch (ttsError) {
+            console.error("Auto-play TTS failed:", ttsError);
+            if (currentAudio) currentAudio.pause();
+            setCurrentAudio(null);
+            setPlayingMessageId(null);
+          }
+        }
+      
     } catch (e) {
       console.error("Error regenerating message:", e);
       // 失败时移除加载气泡并给出错误提示
@@ -1497,10 +1612,7 @@ export default function App() {
                 <div className="flex-1 w-full overflow-y-auto flex flex-col space-y-2 pb-4">
                   {isSessionLoading && (
                     <div className="flex justify-center pt-10">
-                      <div className="inline-flex items-center rounded-full bg-black text-white px-4 py-2 text-xs shadow-soft-card">
-                        <Loader2 className="animate-spin mr-2" size={16} />
-                        正在加载会话…
-                      </div>
+                      <Loader />
                     </div>
                   )}
 
@@ -1639,14 +1751,13 @@ export default function App() {
 
                   {/* 模型小标签（桌面显示） */}
                   <div
-                    className="ml-3 hidden sm:flex items-center"
+                    className="ml-3 hidden sm:flex items-center relative"
                     ref={modelMenuRef}
                   >
                     <button
                       type="button"
                       onClick={() => setIsModelMenuOpen((p) => !p)}
-                      className="inline-flex items-center px-2.5 py-1 rounded-full bg-bubble-hint text-[11px] text-gray-700 hover:bg-[#f1e5d6] border
-  border-[#e6d9ca]"
+                      className="inline-flex items-center px-2.5 py-1 rounded-full bg-bubble-hint text-[11px] text-gray-700 hover:bg-[#f1e5d6] border border-[#e6d9ca]"
                     >
                       <span className="flex items-center justify-center w-4 h-4 rounded-full mr-1.5">
                         <img
@@ -1660,14 +1771,83 @@ export default function App() {
                         : "2.5 Pro"}
                       <ChevronsUpDown size={12} className="ml-1" />
                     </button>
+
+                    {/* 模型选择弹层 */}
+                    {isModelMenuOpen && (
+                      <div 
+                        className="absolute bottom-full right-0 mb-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-50"
+                      >
+                        <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
+                          <span className="flex items-center justify-center w-5 h-5 rounded-full ">
+                            <img
+                              src={GeminiLogo}
+                              alt="Google Gemini"
+                              className="w-4 h-4"
+                            />
+                          </span>
+                          <span className="text-xs font-semibold text-gray-600">
+                            Gemini 模型
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedModel("gemini-2.5-flash");
+                            setIsModelMenuOpen(false);
+                          }}
+                          className={`w-full px-3 py-2 text-left text-sm flex items-center justify-between hover:bg-bubble-hint transition-colors ${
+                            selectedModel === "gemini-2.5-flash"
+                              ? "text-gray-900 bg-bubble-hint"
+                              : "text-gray-700"
+                          }`}
+                        >
+                          <div>
+                            <div className="font-medium">Gemini 2.5 Flash</div>
+                            <div className="text-xs text-gray-400">
+                              快速响应，适合日常对话
+                            </div>
+                          </div>
+                          {selectedModel === "gemini-2.5-flash" && (
+                            <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-black text-white">
+                              当前
+                            </span>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedModel("gemini-2.5-pro");
+                            setIsModelMenuOpen(false);
+                          }}
+                          className={`w-full px-3 py-2 text-left text-sm flex items-center justify-between hover:bg-bubble-hint transition-colors rounded-b-2xl ${
+                            selectedModel === "gemini-2.5-pro"
+                              ? "text-gray-900 bg-bubble-hint"
+                              : "text-gray-700"
+                          }`}
+                        >
+                          <div>
+                            <div className="font-medium">Gemini 2.5 Pro</div>
+                            <div className="text-xs text-gray-400">
+                              更强推理，适合复杂任务
+                            </div>
+                          </div>
+                          {selectedModel === "gemini-2.5-pro" && (
+                            <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-black text-white">
+                              当前
+                            </span>
+                          )}
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* 发送按钮 */}
                   <button
                     type="submit"
                     disabled={isLoading || !currentInput.trim()}
-                    className="ml-3 w-8 h-8 rounded-2xl bg-black text-white flex items-center justify-center shadow-soft-card disabled:opacity-40    
-  disabled:cursor-not-allowed"
+                    className="ml-3 w-8 h-8 rounded-2xl bg-black text-white flex items-center justify-center shadow-soft-card disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {isLoading ? (
                       <Loader2 size={18} className="animate-spin" />
@@ -1695,81 +1875,9 @@ export default function App() {
                       上传视频
                     </button>
                     <button
-                      className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors rounded-
-  b-2xl"
+                      className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors rounded-b-2xl"
                     >
                       <Mic size={16} className="mr-2 text-gray-500" /> 上传音频
-                    </button>
-                  </div>
-                )}
-
-                {/* 模型选择弹层 */}
-                {isModelMenuOpen && (
-                  <div 
-                    className="absolute bottom-full right-0 mb-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-50"
-                  >
-                    <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
-                      <span className="flex items-center justify-center w-5 h-5 rounded-full ">
-                        <img
-                          src={GeminiLogo}
-                          alt="Google Gemini"
-                          className="w-4 h-4"
-                        />
-                      </span>
-                      <span className="text-xs font-semibold text-gray-600">
-                        Gemini 模型
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedModel("gemini-2.5-flash");
-                        setIsModelMenuOpen(false);
-                      }}
-                      className={`w-full px-3 py-2 text-left text-sm flex items-center justify-between hover:bg-bubble-hint transition-colors ${
-                        selectedModel === "gemini-2.5-flash"
-                          ? "text-gray-900 bg-bubble-hint"
-                          : "text-gray-700"
-                      }`}
-                    >
-                      <div>
-                        <div className="font-medium">Gemini 2.5 Flash</div>
-                        <div className="text-xs text-gray-400">
-                          快速响应，适合日常对话
-                        </div>
-                      </div>
-                      {selectedModel === "gemini-2.5-flash" && (
-                        <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-black text-white">
-                          当前
-                        </span>
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedModel("gemini-2.5-pro");
-                        setIsModelMenuOpen(false);
-                      }}
-                      className={`w-full px-3 py-2 text-left text-sm flex items-center justify-between hover:bg-bubble-hint transition-colors        
-  rounded-b-2xl ${
-    selectedModel === "gemini-2.5-pro"
-      ? "text-gray-900 bg-bubble-hint"
-      : "text-gray-700"
-  }`}
-                    >
-                      <div>
-                        <div className="font-medium">Gemini 2.5 Pro</div>
-                        <div className="text-xs text-gray-400">
-                          更强推理，适合复杂任务
-                        </div>
-                      </div>
-                      {selectedModel === "gemini-2.5-pro" && (
-                        <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-black text-white">
-                          当前
-                        </span>
-                      )}
                     </button>
                   </div>
                 )}
@@ -1800,9 +1908,9 @@ export default function App() {
       </div>
 
       {/* 移动端底部小横条（纯装饰） */}
-      <div className="sm:hidden fixed bottom-2 left-0 right-0 flex justify-center pointer-events-none">
+      {/* <div className="sm:hidden fixed bottom-2 left-0 right-0 flex justify-center pointer-events-none">
         <div className="w-24 h-1.5 rounded-full bg-black/10" />
-      </div>
+      </div> */}
 
       {isSummaryModalOpen && (
         <SummaryModal

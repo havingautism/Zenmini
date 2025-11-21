@@ -2,11 +2,49 @@ import React from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
+import rehypeRaw from 'rehype-raw'
 import 'highlight.js/styles/github.css'
 import { Copy, Check } from 'lucide-react'
 
-export default function MarkdownRenderer({ content, className = '' }) {
+export default function MarkdownRenderer({ content, groundingMetadata, className = '' }) {
   const [copiedCode, setCopiedCode] = React.useState(false)
+
+  // Process content to inject inline citations if grounding metadata exists
+  const processedContent = React.useMemo(() => {
+    if (!groundingMetadata || !groundingMetadata.groundingSupports) {
+      return content;
+    }
+
+    let text = content;
+    
+    // Sort supports by text length in descending order to avoid partial matches
+    const supports = [...groundingMetadata.groundingSupports].sort(
+      (a, b) => (b.segment?.text?.length ?? 0) - (a.segment?.text?.length ?? 0)
+    );
+
+    supports.forEach((support) => {
+      const segmentText = support.segment?.text;
+      const indices = support.groundingChunkIndices;
+
+      if (!segmentText || !indices?.length) {
+        return;
+      }
+      
+      // Construct citation as superscript
+      const citationLinks = indices
+        .map((i) => `<sup><a href="#source-${i}" class="citation-link">[${i + 1}]</a></sup>`)
+        .join("");
+      
+      // Find the text segment and append citations after it
+      const segmentIndex = text.indexOf(segmentText);
+      if (segmentIndex !== -1) {
+        const insertPosition = segmentIndex + segmentText.length;
+        text = text.slice(0, insertPosition) + citationLinks + text.slice(insertPosition);
+      }
+    });
+
+    return text;
+  }, [content, groundingMetadata]);
 
   const handleCopyCode = (text) => {
     if (!text) return
@@ -16,11 +54,40 @@ export default function MarkdownRenderer({ content, className = '' }) {
   }
 
   return (
-    <div className={`markdown-content text-sm ${className} prose prose-sm max-w-none`}>
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeHighlight]}
-        components={{
+    <>
+      <style>{`
+        .citation-link {
+          color: #3b82f6;
+          text-decoration: none;
+          font-size: 0.7em;
+          font-weight: 600;
+          margin: 0 1px;
+          padding: 1px 3px;
+          background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+          border: 1px solid #bfdbfe;
+          border-radius: 3px;
+          transition: all 0.2s ease;
+          display: inline-block;
+          line-height: 1.2;
+        }
+        .citation-link:hover {
+          background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+          border-color: #93c5fd;
+          transform: translateY(-1px);
+          box-shadow: 0 2px 4px rgba(59, 130, 246, 0.15);
+        }
+        sup {
+          line-height: 0;
+          vertical-align: super;
+          font-size: 0.75em;
+        }
+      `}</style>
+      <div className={`markdown-content text-sm ${className} prose prose-sm max-w-none`}>
+        <ReactMarkdown
+          children={processedContent}
+          remarkPlugins={[remarkGfm]}
+          rehypePlugins={[rehypeRaw, rehypeHighlight]}
+          components={{
           h1: ({ children }) => (
             <h1 className="text-2xl font-bold mb-4 mt-6 text-gray-900 border-b border-gray-200 pb-2">
               {children}
@@ -34,7 +101,7 @@ export default function MarkdownRenderer({ content, className = '' }) {
           ),
           h3: ({ children }) => (
             <h3 className="text-lg font-medium mb-2 mt-4 text-gray-900 flex items-center">
-              <span className="w-1 h-4 bg-blue-400 mr-2 rounded" />
+              <span className="w-1 h-4 bg-black mr-2 rounded" />
               {children}
             </h3>
           ),
@@ -131,7 +198,7 @@ export default function MarkdownRenderer({ content, className = '' }) {
           a: ({ href, children }) => (
             <a
               href={href}
-              className="text-blue-600 hover:text-blue-700 hover:underline decoration-2 transition-all duration-200 font-medium"
+              className="text-blue-600 p-[1px] hover:text-blue-700 hover:underline decoration-2 transition-all duration-200 font-medium"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -187,9 +254,10 @@ export default function MarkdownRenderer({ content, className = '' }) {
           ),
         }}
       >
-        {content}
+        {processedContent}
       </ReactMarkdown>
     </div>
+    </>
   )
 }
 
