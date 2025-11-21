@@ -617,7 +617,6 @@ export default function App() {
         let finalGroundingMetadata = null;
 
         for await (const chunk of stream) {
-          console.log("Stream chunk received:", chunk);
 
           const delta = chunk.text || "";
           if (delta) {
@@ -635,16 +634,7 @@ export default function App() {
               ? chunk.candidates[0]
               : null;
 
-          if (candidate) {
-            console.log("Chunk keys:", Object.keys(chunk));
-            if (chunk.candidates && chunk.candidates.length > 0) {
-              console.log("Candidate keys:", Object.keys(chunk.candidates[0]));
-            }
-
-            if (candidate.groundingMetadata) {
-              console.log("FOUND groundingMetadata in candidate!", candidate.groundingMetadata);
-            }
-          }
+         
 
           if (
             candidate &&
@@ -660,7 +650,6 @@ export default function App() {
 
           const groundingMetadata = candidate && candidate.groundingMetadata;
           if (groundingMetadata) {
-            console.log("Received groundingMetadata chunk:", groundingMetadata);
             finalGroundingMetadata = JSON.parse(JSON.stringify(groundingMetadata));
             if (Array.isArray(groundingMetadata.groundingChunks)) {
               sources = groundingMetadata.groundingChunks
@@ -738,7 +727,6 @@ export default function App() {
               groundingMetadata: finalGroundingMetadata || null,
               createdAt: modelCreatedAt,
             };
-            console.log("Saving message data (streaming):", messageData);
 
             await addModelMessage(db, appId, userId, currentSessionId, messageData);
           } catch (e) {
@@ -904,16 +892,7 @@ export default function App() {
           createdAt: modelMessage.created_at,
         };
 
-        // 临时调试日志
-        console.log("保存到数据库的消息数据:", {
-          hasThinkingProcess: !!messageData.thinkingProcess,
-          thinkingProcessLength: messageData.thinkingProcess
-            ? messageData.thinkingProcess.length
-            : 0,
-          hasSuggestedReplies:
-            messageData.suggestedReplies &&
-            messageData.suggestedReplies.length > 0,
-        });
+   
 
         addModelMessage(db, appId, userId, currentSessionId, messageData).catch(
           (e) => console.error("Failed to save model message:", e)
@@ -1214,7 +1193,6 @@ export default function App() {
         let finalGroundingMetadata = null;
 
         for await (const chunk of stream) {
-          console.log("Regenerate stream chunk received:", chunk);
 
           const delta = chunk.text || "";
           if (delta) {
@@ -1232,17 +1210,7 @@ export default function App() {
               ? chunk.candidates[0]
               : null;
 
-          if (candidate) {
-            console.log("Regenerate Chunk keys:", Object.keys(chunk));
-            if (chunk.candidates && chunk.candidates.length > 0) {
-              console.log("Regenerate Candidate keys:", Object.keys(chunk.candidates[0]));
-            }
-
-            if (candidate.groundingMetadata) {
-              console.log("FOUND groundingMetadata in regenerate candidate!", candidate.groundingMetadata);
-            }
-          }
-
+        
           if (
             candidate &&
             candidate.content &&
@@ -1257,7 +1225,6 @@ export default function App() {
 
           const groundingMetadata = candidate && candidate.groundingMetadata;
           if (groundingMetadata) {
-            console.log("Received groundingMetadata chunk (regenerate):", groundingMetadata);
             finalGroundingMetadata = JSON.parse(JSON.stringify(groundingMetadata));
             if (Array.isArray(groundingMetadata.groundingChunks)) {
               sources = groundingMetadata.groundingChunks
@@ -1326,7 +1293,6 @@ export default function App() {
               groundingMetadata: finalGroundingMetadata || null,
               createdAt: modelCreatedAt,
             };
-            console.log("Saving regenerate message data (streaming):", messageData);
 
             await addModelMessage(db, appId, userId, activeSessionId, messageData);
           } catch (e) {

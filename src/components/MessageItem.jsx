@@ -131,7 +131,7 @@ export default function MessageItem({
             ) : isUser ? (
               <p className="whitespace-pre-wrap break-words">{msg.content}</p>
             ) : (
-              <MarkdownRenderer content={msg.content} groundingMetadata={msg.groundingMetadata} />
+              <MarkdownRenderer content={msg.content} groundingMetadata={msg.grounding_metadata} />
             )}
 
             {translatedText && (
@@ -142,12 +142,12 @@ export default function MessageItem({
               </div>
             )}
 
-            {msg.groundingMetadata?.searchEntryPoint?.renderedContent && (
+            {/* {msg.groundingMetadata?.searchEntryPoint?.renderedContent && (
                <div
                  className="mt-4 mb-2"
                  dangerouslySetInnerHTML={{ __html: msg.groundingMetadata.searchEntryPoint.renderedContent }}
                />
-            )}
+            )} */}
 
             {msg.sources && msg.sources.length > 0 && (
               <div className="mt-5 pt-4 border-t border-[#f0e6da]">
