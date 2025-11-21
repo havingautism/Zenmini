@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Brain, Loader2 } from "lucide-react";
+import { Brain } from "lucide-react";
+import Loader from "./Loader";
 
 const THINKING_PHASES = [
   "正在深度思考你的问题…",
@@ -33,11 +34,9 @@ export default function LoadingMessage({ isThinking = false }) {
             <div className="flex flex-col">
               
               <span className="text-sm font-medium">{text}</span>
-              <div className="mt-2 flex items-center space-x-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-white/70 animate-bounce" style={{ animationDelay: "0s" }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-white/60 animate-bounce" style={{ animationDelay: "0.2s" }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: "0.4s" }} />
-              </div>
+              <div>
+          <Loader />
+        </div>
             </div>
           </div>
         </div>
@@ -48,14 +47,8 @@ export default function LoadingMessage({ isThinking = false }) {
   return (
     <div className="flex justify-start">
       <div className="flex max-w-xs px-4 py-2 rounded-xl shadow-sm bg-white text-gray-700 rounded-bl-none border border-gray-200">
-        <div className="flex items-center space-x-2">
-          <Loader2 size={16} className="text-gray-400 animate-spin" />
-          <span className="text-xs text-gray-500">Zenmini 正在加载…</span>
-          <div className="flex items-center space-x-0.5 pl-1">
-            <span className="w-1 h-1 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "0s" }} />
-            <span className="w-1 h-1 rounded-full bg-gray-300 animate-bounce" style={{ animationDelay: "0.2s" }} />
-            <span className="w-1 h-1 rounded-full bg-gray-200 animate-bounce" style={{ animationDelay: "0.4s" }} />
-          </div>
+        <div className="flex items-center justify-center min-w-[60px]">
+          <Loader />
         </div>
       </div>
     </div>

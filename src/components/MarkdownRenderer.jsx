@@ -5,8 +5,42 @@ import rehypeHighlight from 'rehype-highlight'
 import 'highlight.js/styles/github.css'
 import { Copy, Check } from 'lucide-react'
 
-export default function MarkdownRenderer({ content, className = '' }) {
+export default function MarkdownRenderer({ content, groundingMetadata, className = '' }) {
   const [copiedCode, setCopiedCode] = React.useState(false)
+
+  // Process content to inject inline citations if grounding metadata exists
+  const processedContent = React.useMemo(() => {
+    if (!groundingMetadata || !groundingMetadata.groundingSupports) {
+      return content;
+    }
+
+    let text = content;
+    // Sort supports by end_index in descending order to avoid shifting issues
+    const supports = [...groundingMetadata.groundingSupports].sort(
+      (a, b) => (b.segment?.endIndex ?? 0) - (a.segment?.endIndex ?? 0)
+    );
+
+    supports.forEach((support) => {
+      const endIndex = support.segment?.endIndex;
+      const indices = support.groundingChunkIndices;
+
+      if (endIndex === undefined || !indices?.length) {
+        return;
+      }
+      
+      // Construct citation links: [1](#source-0)
+      // Note: Display index is i+1, source ID is source-i
+      const citationLinks = indices
+        .map((i) => ` [${i + 1}](#source-${i})`)
+        .join("");
+        
+      if (endIndex <= text.length) {
+        text = text.slice(0, endIndex) + citationLinks + text.slice(endIndex);
+      }
+    });
+
+    return text;
+  }, [content, groundingMetadata]);
 
   const handleCopyCode = (text) => {
     if (!text) return
@@ -18,6 +52,7 @@ export default function MarkdownRenderer({ content, className = '' }) {
   return (
     <div className={`markdown-content text-sm ${className} prose prose-sm max-w-none`}>
       <ReactMarkdown
+        children={processedContent}
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight]}
         components={{
@@ -34,7 +69,7 @@ export default function MarkdownRenderer({ content, className = '' }) {
           ),
           h3: ({ children }) => (
             <h3 className="text-lg font-medium mb-2 mt-4 text-gray-900 flex items-center">
-              <span className="w-1 h-4 bg-blue-400 mr-2 rounded" />
+              <span className="w-1 h-4 bg-black mr-2 rounded" />
               {children}
             </h3>
           ),
@@ -187,7 +222,7 @@ export default function MarkdownRenderer({ content, className = '' }) {
           ),
         }}
       >
-        {content}
+        {processedContent}
       </ReactMarkdown>
     </div>
   )

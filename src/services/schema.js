@@ -17,6 +17,7 @@ create table if not exists public.messages (
   thinking_process text,
   sources jsonb,
   suggested_replies jsonb,
+  grounding_metadata jsonb,
   generated_with_thinking boolean default false,
   generated_with_search boolean default false,
   created_at timestamp with time zone default now()

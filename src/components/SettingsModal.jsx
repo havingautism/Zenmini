@@ -111,7 +111,7 @@ export default function SettingsModal({
                   <p className="text-xs text-gray-500 mb-2">
                     用于访问 Google Gemini 模型的密钥。
                   </p>
-                  <div className="relative">
+                  {/* <div className="relative">
                     <KeyRound
                       size={16}
                       className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -123,7 +123,17 @@ export default function SettingsModal({
                       placeholder="g-..."
                       className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-black/5 transition-all"
                     />
-                  </div>
+                  </div> */}
+                   <InputWithIcon
+                          id="geminiApiKey"
+                          name="geminiApiKey"
+                          label={null}
+                          placeholder="g-..."
+                          value={localGeminiKey}
+                          onChange={(e) => setLocalGeminiKey(e.target.value)}
+                          icon={<KeyRound size={16} />}
+                          isPassword
+                        />
                 </div>
               </section>
 
@@ -355,7 +365,7 @@ export default function SettingsModal({
                     <p className="text-xs text-gray-500 mb-3">
                       用于访问 Google Gemini 模型的密钥。
                     </p>
-                    <div className="relative">
+                    {/* <div className="relative">
                       <KeyRound
                         size={16}
                         className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -367,7 +377,17 @@ export default function SettingsModal({
                         placeholder="g-..."
                         className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-black/5 transition-all"
                       />
-                    </div>
+                    </div> */}
+                        <InputWithIcon
+                          id="geminiApiKey"
+                          name="geminiApiKey"
+                          label={null}
+                          placeholder="g-..."
+                          value={localGeminiKey}
+                          onChange={(e) => setLocalGeminiKey(e.target.value)}
+                          icon={<KeyRound size={16} />}
+                          isPassword
+                        />
                   </div>
                 </section>
 

@@ -10,8 +10,11 @@ import {
   Loader2,
   Volume2,
   StopCircle,
+  Search,
 } from "lucide-react";
 import MarkdownRenderer from "./MarkdownRenderer";
+
+import Loader from "./Loader";
 
 const THINKING_PHASES = [
   "正在理解你的问题…",
@@ -114,43 +117,21 @@ export default function MessageItem({
                   <span className="text-sm text-gray-700 mt-0.5">
                     {THINKING_PHASES[thinkingPhaseIndex]}
                   </span>
-                  <div className="mt-2 flex items-center space-x-1.5">
-                    <span
-                      className="w-1.5 h-1.5 rounded-full bg-gray-500 animate-bounce"
-                      style={{ animationDelay: "0s" }}
-                    />
-                    <span
-                      className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce"
-                      style={{ animationDelay: "0.2s" }}
-                    />
-                    <span
-                      className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-bounce"
-                      style={{ animationDelay: "0.4s" }}
-                    />
+                  <div >
+                   <Loader />
                   </div>
                 </div>
               ) : (
                 <div className="flex items-center space-x-2 text-xs text-gray-500">
-                  <div className="flex items-center space-x-0.5">
-                    <span
-                      className="w-1 h-1 rounded-full bg-gray-400 animate-bounce"
-                      style={{ animationDelay: "0s" }}
-                    />
-                    <span
-                      className="w-1 h-1 rounded-full bg-gray-300 animate-bounce"
-                      style={{ animationDelay: "0.2s" }}
-                    />
-                    <span
-                      className="w-1 h-1 rounded-full bg-gray-200 animate-bounce"
-                      style={{ animationDelay: "0.4s" }}
-                    />
+                   <div >
+                   <Loader />
                   </div>
                 </div>
               )
             ) : isUser ? (
               <p className="whitespace-pre-wrap break-words">{msg.content}</p>
             ) : (
-              <MarkdownRenderer content={msg.content} />
+              <MarkdownRenderer content={msg.content} groundingMetadata={msg.groundingMetadata} />
             )}
 
             {translatedText && (
@@ -159,6 +140,13 @@ export default function MessageItem({
                   <MarkdownRenderer content={translatedText} />
                 </p>
               </div>
+            )}
+
+            {msg.groundingMetadata?.searchEntryPoint?.renderedContent && (
+               <div
+                 className="mt-4 mb-2"
+                 dangerouslySetInnerHTML={{ __html: msg.groundingMetadata.searchEntryPoint.renderedContent }}
+               />
             )}
 
             {msg.sources && msg.sources.length > 0 && (
@@ -183,21 +171,72 @@ export default function MessageItem({
                   />
                 </button>
                 {areSourcesVisible && (
-                  <ul className="space-y-1 mt-2">
-                    {msg.sources.map((source, index) => (
-                      <li key={index} className="text-xs">
-                        <a
-                          href={source.uri}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="truncate block hover:underline text-gray-700"
-                          title={source.title}
-                        >
-                          {index + 1}. {source.title}
-                        </a>
-                      </li>
-                    ))}
+                  <div className="mt-3">
+                    {msg.groundingMetadata?.webSearchQueries && (
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        {msg.groundingMetadata.webSearchQueries.map((query, i) => (
+                          <div key={i} className="text-[10px] bg-gray-100 text-gray-500 px-2 py-1 rounded-full flex items-center">
+                            <Search size={10} className="mr-1" />
+                            {query}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <ul className="space-y-2">
+                    {msg.sources.map((source, index) => {
+                      const domain = (() => {
+                        try {
+                          return new URL(source.uri).hostname;
+                        } catch {
+                          return "";
+                        }
+                      })();
+                      const faviconUrl = domain
+                        ? `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
+                        : null;
+
+                      return (
+                        <li key={index} id={`source-${index}`} className="text-xs bg-[#fcfcfc] border border-gray-100 rounded-xl p-2 hover:bg-gray-50 transition-colors scroll-mt-20">
+                          <a
+                            href={source.uri}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-start gap-2.5 group"
+                            title={source.title}
+                          >
+                            <div className="flex-shrink-0 mt-0.5 w-4 h-4 rounded-sm overflow-hidden bg-gray-100 flex items-center justify-center">
+                              {faviconUrl ? (
+                                <img
+                                  src={faviconUrl}
+                                  alt=""
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.target.style.display = "none";
+                                    e.target.nextSibling.style.display = "flex";
+                                  }}
+                                />
+                              ) : null}
+                              <div
+                                className="hidden w-full h-full items-center justify-center bg-gray-100 text-gray-400"
+                                style={{ display: faviconUrl ? "none" : "flex" }}
+                              >
+                                <Globe size={10} />
+                              </div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-gray-800 truncate group-hover:text-blue-600 transition-colors">
+                                {source.title || "未命名来源"}
+                              </div>
+                              <div className="text-[10px] text-gray-400 truncate mt-0.5">
+                                {domain || source.uri}
+                              </div>
+                            </div>
+                          </a>
+                        </li>
+                      );
+                    })}
                   </ul>
+                  </div>
                 )}
               </div>
             )}
