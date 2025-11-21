@@ -16,26 +16,30 @@ export default function MarkdownRenderer({ content, groundingMetadata, className
     }
 
     let text = content;
-    // Sort supports by end_index in descending order to avoid shifting issues
+    
+    // Sort supports by text length in descending order to avoid partial matches
     const supports = [...groundingMetadata.groundingSupports].sort(
-      (a, b) => (b.segment?.endIndex ?? 0) - (a.segment?.endIndex ?? 0)
+      (a, b) => (b.segment?.text?.length ?? 0) - (a.segment?.text?.length ?? 0)
     );
 
     supports.forEach((support) => {
-      const endIndex = support.segment?.endIndex;
+      const segmentText = support.segment?.text;
       const indices = support.groundingChunkIndices;
 
-      if (endIndex === undefined || !indices?.length) {
+      if (!segmentText || !indices?.length) {
         return;
       }
       
-      // Construct citation as superscript: <sup>[1]</sup><sup>[2]</sup>
+      // Construct citation as superscript
       const citationLinks = indices
         .map((i) => `<sup><a href="#source-${i}" class="citation-link">[${i + 1}]</a></sup>`)
         .join("");
-        
-      if (endIndex <= text.length) {
-        text = text.slice(0, endIndex) + citationLinks + text.slice(endIndex);
+      
+      // Find the text segment and append citations after it
+      const segmentIndex = text.indexOf(segmentText);
+      if (segmentIndex !== -1) {
+        const insertPosition = segmentIndex + segmentText.length;
+        text = text.slice(0, insertPosition) + citationLinks + text.slice(insertPosition);
       }
     });
 
