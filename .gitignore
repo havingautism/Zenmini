@@ -2,7 +2,7 @@ node_modules/
 dist/
 .DS_Store
 *.log
-.env
+
 .env.local
 
 # Editor directories and files
@@ -19,7 +19,7 @@ dist/
 .gemini/
 
 # Debug and temporary files
-databasereset/
+database_reset/
 debug/
 *.debug.md
 *_debug.md
