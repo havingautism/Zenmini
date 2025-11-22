@@ -4,3 +4,23 @@ dist/
 *.log
 .env
 .env.local
+
+# Editor directories and files
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# AI Assistant folders
+.claude/
+.gemini/
+
+# Debug and temporary files
+databasereset/
+debug/
+*.debug.md
+*_debug.md
+debug_*.md
