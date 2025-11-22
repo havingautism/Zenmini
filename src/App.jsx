@@ -1953,7 +1953,7 @@ export default function App() {
                 localStorage.removeItem("sb_inited");
               }
             } catch {}
-            await initApp();
+            await initApp(userId);
           }}
           isAutoPlayTts={isAutoPlayTts}
           onToggleAutoPlayTts={() => setIsAutoPlayTts((prev) => !prev)}
