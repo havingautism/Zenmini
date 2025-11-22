@@ -13,7 +13,7 @@ import {
   Search,
 } from "lucide-react";
 import MarkdownRenderer from "./MarkdownRenderer";
-
+import { FaGoogle } from "react-icons/fa";
 import Loader from "./Loader";
 
 const THINKING_PHASES = [
@@ -67,12 +67,12 @@ export default function MessageItem({
   return (
     <div className="flex justify-center">
       <div
-        className={`flex w-full max-w-3xl px-3 sm:px-4 ${
+        className={`flex w-full max-w-3xl px-4 ${
           isUser ? "justify-end" : "justify-start"
         } mt-1 mb-1`}
       >
         <div
-          className={`flex flex-col max-w-[100%] sm:max-w-[80%] shadow-soft-card ${
+          className={`flex flex-col max-w-[100%] sm:max-w-[80%] shadow-[0_4px_20px_rgba(0,0,0,0.05)] sm:shadow-soft-card ${
             isUser
               ? "bg-bubble-user text-white rounded-3xl rounded-br-sm"
               : botBubbleClass
@@ -103,7 +103,7 @@ export default function MessageItem({
             <div
               className={`px-4 pt-2 ${isThinkingVisible ? "block" : "hidden"}`}
             >
-              <p className="whitespace-pre-wrap break-words italic text-gray-500 pb-2 border-b border-gray-200 text-[13px] sm:text-[14px]">
+              <p className="italic text-gray-500 pb-2 border-b border-gray-200 text-[13px] sm:text-[14px]">
                 <MarkdownRenderer content={msg.thinkingProcess} />
               </p>
             </div>
@@ -131,12 +131,15 @@ export default function MessageItem({
             ) : isUser ? (
               <p className="whitespace-pre-wrap break-words">{msg.content}</p>
             ) : (
-              <MarkdownRenderer content={msg.content} groundingMetadata={msg.grounding_metadata} />
+              <MarkdownRenderer
+                content={msg.content}
+                groundingMetadata={msg.groundingMetadata || msg.grounding_metadata}
+              />
             )}
 
             {translatedText && (
               <div className="mt-2 pt-2 border-t border-gray-300 border-opacity-50">
-                <p className="text-sm italic opacity-80 whitespace-pre-wrap break-words">
+                <p className="text-sm italic ">
                   <MarkdownRenderer content={translatedText} />
                 </p>
               </div>
@@ -172,9 +175,11 @@ export default function MessageItem({
                 </button>
                 {areSourcesVisible && (
                   <div className="mt-3">
-                    {msg.groundingMetadata?.webSearchQueries && (
-                      <div className="mb-3 flex flex-wrap gap-2">
-                        {msg.groundingMetadata.webSearchQueries.map((query, i) => (
+                 
+                    {msg.grounding_metadata?.webSearchQueries && (
+                      <div className="mb-3 flex flex-wrap items-center gap-2">
+                           <FaGoogle size={14} className="mr-1" />
+                        {msg.grounding_metadata.webSearchQueries.map((query, i) => (
                           <div key={i} className="text-[10px] bg-gray-100 text-gray-500 px-2 py-1 rounded-full flex items-center">
                             <Search size={10} className="mr-1" />
                             {query}
@@ -182,67 +187,43 @@ export default function MessageItem({
                         ))}
                       </div>
                     )}
-                    <ul className="space-y-2">
-                    {msg.sources.map((source, index) => {
-                      const domain = (() => {
-                        try {
-                          return new URL(source.uri).hostname;
-                        } catch {
-                          return "";
-                        }
-                      })();
-                      const faviconUrl = domain
-                        ? `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
-                        : null;
-
-                      return (
-                        <li key={index} id={`source-${index}`} className="text-xs bg-[#fcfcfc] border border-gray-100 rounded-xl p-2 hover:bg-gray-50 transition-colors scroll-mt-20">
+                  <ul className="space-y-2">                                                                                                                          
+    {msg.sources.map((source, index) => (                                                                                                             
+      <li                                                                                                                                             
+        key={index}                                                                                                                                   
+        id={`source-${index}`}                                                                                                                        
+        className="text-xs bg-[#fcfcfc] border border-gray-100 rounded-xl p-2 hover:bg-gray-50 transition-colors scroll-mt-20"                        
+      >                                                                                                                                               
                           <a
                             href={source.uri}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-start gap-2.5 group"
+                            className="flex items-center gap-2.5 group"
                             title={source.title}
                           >
-                            <div className="flex-shrink-0 mt-0.5 w-4 h-4 rounded-sm overflow-hidden bg-gray-100 flex items-center justify-center">
-                              {faviconUrl ? (
-                                <img
-                                  src={faviconUrl}
-                                  alt=""
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    e.target.style.display = "none";
-                                    e.target.nextSibling.style.display = "flex";
-                                  }}
-                                />
-                              ) : null}
-                              <div
-                                className="hidden w-full h-full items-center justify-center bg-gray-100 text-gray-400"
-                                style={{ display: faviconUrl ? "none" : "flex" }}
-                              >
-                                <Globe size={10} />
-                              </div>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-gray-800 truncate group-hover:text-blue-600 transition-colors">
-                                {source.title || "未命名来源"}
-                              </div>
-                              <div className="text-[10px] text-gray-400 truncate mt-0.5">
-                                {domain || source.uri}
-                              </div>
-                            </div>
-                          </a>
-                        </li>
-                      );
-                    })}
-                  </ul>
+          {/* 统一的互联网图标 */}                                                                                                                    
+          <div className="flex-shrink-0 mt-0.5 w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">                      
+            <Globe size={14} />                                                                                                                       
+          </div>                                                                                                                                      
+                                                                                                                                                      
+          {/* 只显示标题，不显示 URL / 域名 */}                                                                                                       
+          <div className="flex-1 min-w-0">                                                                                                            
+            <div className="font-medium text-gray-800 truncate group-hover:text-blue-600 transition-colors">                                          
+              {source.title || "未命名来源"}                                                                                                          
+            </div>                                                                                                                                    
+          </div>                                                                                                                                      
+        </a>                                                                                                                                          
+      </li>                                                                                                                                           
+    ))}                                                                                                                                               
+  </ul>    
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          {!isUser && (
+          {!isUser && !isLoadingBubble &&
+              !isThinkingLoading && (
             <div className="mt-auto pt-2 px-4 pb-2 border-t border-gray-100 flex items-center justify-between space-x-1 text-[12px] sm:text-[13px]">
               <div className="flex items-center space-x-3">
                 {msg.generatedWithThinking && (

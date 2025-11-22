@@ -113,12 +113,12 @@ export default function MarkdownRenderer({ content, groundingMetadata, className
           ),
 
           ul: ({ children }) => (
-            <ul className="list-disc list-inside mb-3 text-gray-800 space-y-1.5 text-[15px]">
+            <ul className="list-disc list-outside ml-5 mb-3 text-gray-800 space-y-1.5 text-[15px]">
               {children}
             </ul>
           ),
           ol: ({ children }) => (
-            <ol className="list-decimal list-inside mb-3 text-gray-800 space-y-1.5 text-[15px]">
+            <ol className="list-decimal list-outside ml-5 mb-3 text-gray-800 space-y-1.5 text-[15px]">
               {children}
             </ol>
           ),

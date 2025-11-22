@@ -566,7 +566,7 @@ export default function SettingsModal({
                 </div>
 
                 <div className="text-xs text-gray-400 pt-8">
-                  <p>© 2024 Zenmini Project. All rights reserved.</p>
+                  <p>© 2025 Zenmini Project. All rights reserved.</p>
                 </div>
               </div>
             )}
