@@ -63,6 +63,7 @@ import SummaryModal from "./components/SummaryModal";
 import SettingsModal from "./components/SettingsModal";
 import SchemaInitModal from "./components/SchemaInitModal";
 import Loader from "./components/Loader";
+import BlackHole from "./components/BlackHole";
 import SuggestedReplyMarkdown from "./components/SuggestedReplyMarkdown";
 
 
@@ -358,6 +359,7 @@ export default function App() {
     setMessages([]);
     setSuggestedReplies([]);
     setIsSessionActive(false);
+    setIsSidebarOpen(false);
 
     // Do not create session here; create on first message
     return;
@@ -1378,7 +1380,7 @@ export default function App() {
               title="会话历史"
               onClick={() => setIsSidebarOpen((prev) => !prev)}
             >
-              <History size={15} />
+              <History size={15} color="black" />
             </button>
           </div>
         </div>
@@ -1599,12 +1601,14 @@ export default function App() {
             {/* 中间：标题 + 消息列表 */}
             <div className="flex-1 w-full flex flex-col items-center min-h-0 overflow-auto">
               <div className="w-full max-w-3xl flex-1 flex flex-col items-center">
-                {/* 首屏标题 */}
+                {/* 首屏标题和黑洞效果 */}
                 {messages.length === 0 && !isSessionLoading && (
-                  <div className="pt-16 pb-10 text-center">
-                    <h1 className="text-3xl sm:text-4xl font-semibold text-black mb-4">
-                      What can I help with?
+                  <div className="pt-8 pb-10 text-center">
+                    <h1 className="text-3xl sm:text-4xl font-semibold text-black mb-16">
+                      {/* What can I help with? */}
+                      我有什么能帮您的?
                     </h1>
+                  
                   </div>
                 )}
 
@@ -1615,7 +1619,10 @@ export default function App() {
                       <Loader />
                     </div>
                   )}
-
+                    {messages.length === 0 && !isSessionLoading && (
+<div className="my-50">
+                      <BlackHole />
+                    </div>)}
                   {messages.map((msg, index) => (
                     <MessageItem
                       key={msg.id || index}
@@ -1742,7 +1749,7 @@ export default function App() {
                       }
                     }}
                     placeholder={
-                      isLoading ? "正在思考中..." : "Ask anything"
+                      isLoading ? "正在思考中..." : "提问任何事"
                     }
                     disabled={isLoading}
                     rows={1}
