@@ -30,6 +30,14 @@ import {
   ChevronsUpDown,
   Trash2,
   MoreVertical,
+  Check,
+  Copy,
+  X,
+  MessageSquare,
+  MoreHorizontal,
+  ChevronDown,
+  Settings,
+  Send,
 } from "lucide-react";
 import MarkdownRenderer from "./components/MarkdownRenderer";
 import {
@@ -114,6 +122,7 @@ export default function App() {
   const [isThinkingMode, setIsThinkingMode] = useState(true);
   const [isSearchMode, setIsSearchMode] = useState(true);
   const [isUploadMenuOpen, setIsUploadMenuOpen] = useState(false);
+  const [isMobileOptionsOpen, setIsMobileOptionsOpen] = useState(false);
   const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
 
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -125,6 +134,27 @@ export default function App() {
   const messagesEndRef = useRef(null);
   const uploadMenuRef = useRef(null);
   const modelMenuRef = useRef(null);
+  const scrollRef = useRef(null);
+  const mobileOptionsRef = useRef(null);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (scrollRef.current) {
+        setIsScrolled(scrollRef.current.scrollTop > 10);
+      }
+    };
+
+    const container = scrollRef.current;
+    if (container) {
+      container.addEventListener("scroll", handleScroll);
+    }
+    return () => {
+      if (container) {
+        container.removeEventListener("scroll", handleScroll);
+      }
+    };
+  }, []);
 
   // 初始化 Supabase
   const initApp = async (cid) => {
@@ -182,6 +212,22 @@ export default function App() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isUploadMenuOpen]);
+
+  useEffect(() => {
+    if (!isMobileOptionsOpen) return;
+    const handleClickOutside = (event) => {
+      if (
+        mobileOptionsRef.current &&
+        !mobileOptionsRef.current.contains(event.target)
+      ) {
+        setIsMobileOptionsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isMobileOptionsOpen]);
 
   useEffect(() => {
     if (!isModelMenuOpen) return;
@@ -1433,8 +1479,8 @@ export default function App() {
     <div className="h-screen w-full bg-gray-100 flex items-center justify-center p-2 text-gray-900">
       <div className="relative flex w-full  h-full  bg-white rounded-4xl shadow-soft-card border border-gray-200 overflow-hidden">
         {/* 左侧竖向图标栏（桌面端可见） */}
-        <div className="hidden sm:flex flex-col justify-between py-6 px-8 w-12">
-          <div className="flex flex-col items-center space-y-3">
+        <div className="hidden sm:flex flex-col justify-between py-5 px-8 w-12">
+          <div className="flex flex-col items-center space-y-5">
             <button
               onClick={handleNewChat}
               className="w-9 h-9 rounded-2xl bg-black text-white flex items-center justify-center shadow-soft-card"
@@ -1647,7 +1693,13 @@ export default function App() {
         {/* 主内容区域 */}
         <div className="flex-1 flex flex-col min-h-0">
           {/* 顶部栏：左侧小图标 + 右侧 Get Pro */}
-          <header className="flex items-center justify-between px-4 sm:px-8 pt-5 sm:pt-6">
+          <header
+            className={`flex items-center justify-between px-4 sm:px-8 py-2 sm:py-5 transition-all duration-200 ${
+              isScrolled
+                ? "bg-white/80 backdrop-blur-md shadow-sm z-10"
+                : "bg-transparent"
+            }`}
+          >
             {/* 仅移动端显示的会话按钮 */}
             <button
               type="button"
@@ -1659,7 +1711,7 @@ export default function App() {
 
             <button
               type="button"
-              className="ml-auto inline-flex items-center rounded-full bg-black text-white text-[11px] sm:text-xs px-3 sm:px-4 py-1.5 shadow-soft-card"
+              className="ml-auto flex items-center justify-center rounded-full bg-black text-white shadow-soft-card w-8 h-8 sm:w-9 sm:h-9"
               onClick={() => setIsSettingsModalOpen(true)}
             >
               <span className="w-5 h-5 rounded-full bg-gradient-to-br from-gray-200 via-gray-50 to-gray-400" />
@@ -1667,9 +1719,13 @@ export default function App() {
           </header>
 
           {/* 中心聊天区域 */}
-          <main className="flex-1 flex flex-col items-center justify-between px-3 sm:px-10 pb-4 sm:pb-2 pt-4 sm:pt-2 min-h-0">
+          <main className="flex-1 flex flex-col items-center justify-between px-3 sm:px-10 pb-4 sm:pb-2 pt-0 min-h-0">
             {/* 中间：标题 + 消息列表 */}
-            <div className="flex-1 w-full flex flex-col items-center min-h-0 overflow-auto">
+            {/* 中间：标题 + 消息列表 */}
+            <div
+              ref={scrollRef}
+              className="flex-1 w-full flex flex-col items-center min-h-0 overflow-auto"
+            >
               <div className="w-full max-w-3xl flex-1 flex flex-col items-center">
                 {/* 首屏标题和黑洞效果 */}
                 {messages.length === 0 && !isSessionLoading && (
@@ -1756,7 +1812,7 @@ export default function App() {
               {/* 输入卡片 */}
               <form onSubmit={handleSendMessage} className="relative w-full">
                 <div className="flex items-center rounded-[26px] bg-white shadow-soft-card border border-[#efe4d7] px-4 py-2 sm:py-3">
-                  {/* 左侧工具按钮：上传 / Search / Thinking */}
+                  {/* 左侧工具按钮：上传 / Mobile Options / Desktop Toggles */}
                   <div
                     className="flex items-center space-x-2 mr-3 text-gray-400"
                     ref={uploadMenuRef}
@@ -1764,13 +1820,24 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setIsUploadMenuOpen((p) => !p)}
-                      className="w-6 h-6 rounded-full border border-[#e4d7c8] flex items-center justify-center hover:bg-bubble-hint/60 transition-   
-  colors"
-                      title="上传文件 (暂不可用)"
+                      className="w-6 h-6 rounded-full border border-[#e4d7c8] flex items-center justify-center hover:bg-bubble-hint/60 transition-colors"
+                      title="上传文件"
                     >
                       <Plus size={14} />
                     </button>
+
+                    {/* 移动端专属：功能菜单按钮 */}
+                    <button
+                      type="button"
+                      onClick={() => setIsMobileOptionsOpen((p) => !p)}
+                      className="sm:hidden w-6 h-6 rounded-full border border-[#e4d7c8] flex items-center justify-center hover:bg-bubble-hint/60 transition-colors"
+                      title="模型与功能"
+                    >
+                      <SlidersHorizontal size={13} />
+                    </button>
                    
+                   {/* 桌面端显示的功能开关 */}
+                   <div className="hidden sm:flex items-center space-x-2">
                     <button
                       type="button"
                       onClick={() => setIsThinkingMode((p) => !p)}
@@ -1779,6 +1846,7 @@ export default function App() {
                           ? "bg-black text-white border-black"
                           : "border-[#e4d7c8] text-gray-500 bg-white"
                       }`}
+                      title="思考模式"
                     >
                       <Brain size={13} />
                     </button>
@@ -1790,10 +1858,115 @@ export default function App() {
                           ? "bg-black text-white border-black"
                           : "border-[#e4d7c8] text-gray-500 bg-white"
                       }`}
+                      title="联网搜索"
                     >
                       <Globe size={13} />
                     </button>
+                   </div>
                   </div>
+
+                  {/* ... input textarea ... */}
+
+                  {/* ... send button ... */}
+
+                {/* 移动端功能菜单 */}
+                {isMobileOptionsOpen && (
+                  <div ref={mobileOptionsRef} className="absolute bottom-full left-8 mb-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-20 overflow-hidden sm:hidden">
+                      <div className="px-3 py-2 border-b border-gray-100 text-xs font-semibold text-gray-500 bg-gray-50">
+                        模型与功能
+                      </div>
+                      
+                      {/* 模型选择 */}
+                      <div className="px-2 py-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedModel("gemini-2.5-flash");
+                            setIsMobileOptionsOpen(false);
+                          }}
+                          className={`flex items-center w-full px-3 py-2 text-left text-sm rounded-lg transition-colors ${
+                            selectedModel === "gemini-2.5-flash"
+                              ? "bg-bubble-hint text-gray-900 font-medium"
+                              : "text-gray-700 hover:bg-gray-50"
+                          }`}
+                        >
+                          <span className="flex-1">Gemini 2.5 Flash</span>
+                          {selectedModel === "gemini-2.5-flash" && <Check size={14} />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedModel("gemini-2.5-pro");
+                            setIsMobileOptionsOpen(false);
+                          }}
+                          className={`flex items-center w-full px-3 py-2 text-left text-sm rounded-lg transition-colors ${
+                            selectedModel === "gemini-2.5-pro"
+                              ? "bg-bubble-hint text-gray-900 font-medium"
+                              : "text-gray-700 hover:bg-gray-50"
+                          }`}
+                        >
+                          <span className="flex-1">Gemini 2.5 Pro</span>
+                          {selectedModel === "gemini-2.5-pro" && <Check size={14} />}
+                        </button>
+                      </div>
+
+                      <div className="h-px bg-gray-100 my-1 mx-2" />
+
+                      {/* 功能开关 */}
+                      <button
+                        type="button"
+                        onClick={() => setIsThinkingMode(!isThinkingMode)}
+                        className="flex items-center justify-between w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-center">
+                          <Brain size={16} className={`mr-2 ${isThinkingMode ? "text-black" : "text-gray-400"}`} />
+                          <span>思考模式</span>
+                        </div>
+                        <div className={`w-8 h-4 rounded-full relative transition-colors ${isThinkingMode ? "bg-black" : "bg-gray-200"}`}>
+                          <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${isThinkingMode ? "left-4.5" : "left-0.5"}`} style={{ left: isThinkingMode ? '18px' : '2px' }} />
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsSearchMode(!isSearchMode)}
+                        className="flex items-center justify-between w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-center">
+                          <Globe size={16} className={`mr-2 ${isSearchMode ? "text-black" : "text-gray-400"}`} />
+                          <span>联网搜索</span>
+                        </div>
+                        <div className={`w-8 h-4 rounded-full relative transition-colors ${isSearchMode ? "bg-black" : "bg-gray-200"}`}>
+                          <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${isSearchMode ? "left-4.5" : "left-0.5"}`} style={{ left: isSearchMode ? '18px' : '2px' }} />
+                        </div>
+                      </button>
+                  </div>
+                )}
+
+                {/* 上传菜单 (Restored to original) */}
+                {isUploadMenuOpen && (
+                  <div className="absolute bottom-full left-0 mb-2 w-52 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-20">
+                    <div className="px-3 py-2 border-b border-gray-100 text-xs font-semibold text-gray-500">
+                      上传（开发中）
+                    </div>
+                    <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                      <File size={16} className="mr-2 text-gray-500" /> 上传文档
+                    </button>
+                    <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                      <Image size={16} className="mr-2 text-gray-500" />{" "}
+                      上传图片
+                    </button>
+                    <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                      <Video size={16} className="mr-2 text-gray-500" />{" "}
+                      上传视频
+                    </button>
+                    <button
+                      className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors rounded-b-2xl"
+                    >
+                      <Mic size={16} className="mr-2 text-gray-500" /> 上传音频
+                    </button>
+                  </div>
+                )}
 
                   {/* 输入框本体 */}
                   <textarea
@@ -1936,8 +2109,10 @@ export default function App() {
 
                 {/* 上传菜单 */}
                 {isUploadMenuOpen && (
-                  <div className="absolute bottom-full left-0 mb-2 w-52 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-20">
-                    <div className="px-3 py-2 border-b border-gray-100 text-xs font-semibold text-gray-500">
+                  <div className="absolute bottom-full left-0 mb-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-20 overflow-hidden">
+                    {/* 移动端专属选项 */}
+                  
+                    <div className="px-3 py-2 border-b border-gray-100 text-xs font-semibold text-gray-500 bg-gray-50">
                       上传（开发中）
                     </div>
                     <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
@@ -1952,7 +2127,7 @@ export default function App() {
                       上传视频
                     </button>
                     <button
-                      className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors rounded-b-2xl"
+                      className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       <Mic size={16} className="mr-2 text-gray-500" /> 上传音频
                     </button>
