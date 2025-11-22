@@ -47,7 +47,7 @@ import {
   loadSupabaseConfigFromLocalStorage,
   getOrCreateClientId,
 } from "./services/supabase";
-import { initSchemaIfFirstUse, getSchemaSql } from "./services/schema";
+import { initSchemaIfFirstUse, getSchemaSql, detectTables } from "./services/schema";
 import {
   subscribeSessions,
   subscribeMessages,
@@ -128,23 +128,35 @@ export default function App() {
 
   // 初始化 Supabase
   const initApp = async (cid) => {
+    console.log("[initApp] Starting with cid:", cid);
     let configToUse = loadSupabaseConfigFromLocalStorage();
-    if (!configToUse) configToUse = loadSupabaseConfigFromEnv();
+    console.log("[initApp] Config from localStorage:", configToUse);
+    if (!configToUse) {
+      configToUse = loadSupabaseConfigFromEnv();
+      console.log("[initApp] Config from env:", configToUse);
+    }
     if (configToUse) setLocalSbConfig(configToUse);
+    
     if (configToUse && configToUse.url && configToUse.anonKey) {
+      console.log("[initApp] Config valid, initializing Supabase...");
       try {
         const { client } = initSupabase(configToUse, cid);
+        console.log("[initApp] Supabase client created:", client ? "SUCCESS" : "FAILED");
         setClient(client);
         setIsConfigMissing(false);
         await initSchemaIfFirstUse(client, setNeedsSchemaInit, setSchemaSql);
         return client;
       } catch (e) {
-        console.error("Supabase initialization error:", e);
+        console.error("[initApp] Supabase initialization error:", e);
         setIsConfigMissing(true);
         setClient(null);
         return null;
       }
     } else {
+      console.warn("[initApp] No valid Supabase config found!");
+      console.log("  - configToUse:", configToUse);
+      console.log("  - url:", configToUse?.url);
+      console.log("  - anonKey:", configToUse?.anonKey ? "SET" : "NULL");
       setIsConfigMissing(true);
       setClient(null);
       return null;
@@ -1353,11 +1365,52 @@ export default function App() {
     }
   };
 
-  const handleTestSchema = () => {
-    setSchemaSql(getSchemaSql());
-    setNeedsSchemaInit(true);
-    setIsSettingsModalOpen(false);
+  const handleTestSchema = async (config) => {
+    const cfg = config || localSbConfig;
+    
+    if (!cfg || !cfg.url || !cfg.anonKey) {
+      alert("请先填写 Supabase URL 和 Anon Key");
+      return;
+    }
+
+    try {
+      // Create a temp client to test connection
+      const { client: tempClient } = initSupabase(cfg, null);
+      const { hasSessions, hasMessages } = await detectTables(tempClient);
+
+      if (hasSessions && hasMessages) {
+        alert("✅ 连接成功！数据库表已存在。");
+      } else {
+        // Tables missing, show init modal
+        setSchemaSql(getSchemaSql());
+        setNeedsSchemaInit(true);
+        setIsSettingsModalOpen(false);
+      }
+    } catch (e) {
+      console.error("Test connection failed:", e);
+      alert("❌ 连接失败，请检查 URL 和 Key 是否正确。\n" + e.message);
+    }
   };
+
+  // Debug helper - expose to window for console access
+  React.useEffect(() => {
+    window.debugZenmini = () => {
+      console.log("=== Zenmini Debug Info ===");
+      console.log("userId:", userId);
+      console.log("client (db):", client ? "Connected" : "NULL");
+      console.log("userApiKey:", userApiKey ? "SET (length: " + userApiKey.length + ")" : "NULL");
+      console.log("isLoading:", isLoading);
+      console.log("activeSessionId:", activeSessionId);
+      console.log("isAuthReady:", isAuthReady);
+      console.log("=========================");
+      console.log("Try: window.testSend()");
+    };
+    window.testSend = () => {
+      console.log("Test sending message...");
+      submitMessage("test message from console");
+    };
+  }, [userId, client, userApiKey, isLoading, activeSessionId, isAuthReady]);
+
 
   return (
     <div className="h-screen w-full bg-gray-100 flex items-center justify-center p-2 text-gray-900">

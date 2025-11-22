@@ -4,7 +4,7 @@ async function sbFetchSessions(supabase, appId, clientId) {
     .from('chat_sessions')
     .select('*')
     .eq('app_id', appId)
-    .eq('client_id', clientId)
+    // Removed client_id filter to share sessions across all devices
     .order('created_at', { ascending: false })
   if (error) throw error
   return data || []
@@ -61,7 +61,7 @@ function subscribeMessagesSB(supabase, appId, clientId, sessionId, onChange, onE
 async function createSessionSB(supabase, appId, clientId, title) {
   const { data, error } = await supabase
     .from('chat_sessions')
-    .insert([{ app_id: appId, client_id: clientId, title }])
+    .insert([{ app_id: appId, client_id: 'shared-user', title }])
     .select('id')
     .single()
   if (error) throw error

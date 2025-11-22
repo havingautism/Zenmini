@@ -14,7 +14,7 @@
 3. 添加以下 secrets（如果需要）：
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
-   - `VITE_GEMINI_API_KEY`（不推荐，应该让用户在前端输入）
+   - `VITE_GEMINI_API_KEY`
 
 ### 3. 触发部署
 部署会在以下情况自动触发：
