@@ -242,7 +242,8 @@ export default function MessageItem({
             )}
           </div>
 
-          {!isUser && (
+          {!isUser && !isLoadingBubble &&
+              !isThinkingLoading && (
             <div className="mt-auto pt-2 px-4 pb-2 border-t border-gray-100 flex items-center justify-between space-x-1 text-[12px] sm:text-[13px]">
               <div className="flex items-center space-x-3">
                 {msg.generatedWithThinking && (

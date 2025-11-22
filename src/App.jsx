@@ -631,24 +631,15 @@ export default function App() {
         let finalGroundingMetadata = null;
 
         for await (const chunk of stream) {
-
           const delta = chunk.text || "";
           if (delta) {
             fullText += delta;
-
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === modelMessageId ? { ...m, content: fullText } : m
-              )
-            );
           }
 
           const candidate =
             chunk.candidates && chunk.candidates.length > 0
               ? chunk.candidates[0]
               : null;
-
-         
 
           if (
             candidate &&
@@ -665,22 +656,39 @@ export default function App() {
           const groundingMetadata = candidate && candidate.groundingMetadata;
           if (groundingMetadata) {
             finalGroundingMetadata = JSON.parse(JSON.stringify(groundingMetadata));
+            console.log("[Stream] Received groundingMetadata:", groundingMetadata);
+
             if (Array.isArray(groundingMetadata.groundingChunks)) {
               sources = groundingMetadata.groundingChunks
                 .map((chunk) => ({
                   uri: chunk.web?.uri,
                   title: chunk.web?.title,
                 }))
-                .filter((s) => s.uri && s.title);
+                .filter((s) => s.uri); // Relaxed filter: only require URI
             } else if (Array.isArray(groundingMetadata.groundingAttributions)) {
               sources = groundingMetadata.groundingAttributions
                 .map((attribution) => ({
                   uri: attribution.web?.uri,
                   title: attribution.web?.title,
                 }))
-                .filter((s) => s.uri && s.title);
+                .filter((s) => s.uri); // Relaxed filter: only require URI
             }
+            console.log("[Stream] Updated sources:", sources);
           }
+
+          // Update messages state immediately with whatever we have (text or metadata)
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === modelMessageId
+                ? {
+                    ...m,
+                    content: fullText,
+                    sources: sources || [],
+                    groundingMetadata: finalGroundingMetadata || null,
+                  }
+                : m
+            )
+          );
         }
 
         const thinkingProcess =
@@ -1207,16 +1215,9 @@ export default function App() {
         let finalGroundingMetadata = null;
 
         for await (const chunk of stream) {
-
           const delta = chunk.text || "";
           if (delta) {
             fullText += delta;
-
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === modelMessageId ? { ...m, content: fullText } : m
-              )
-            );
           }
 
           const candidate =
@@ -1224,7 +1225,6 @@ export default function App() {
               ? chunk.candidates[0]
               : null;
 
-        
           if (
             candidate &&
             candidate.content &&
@@ -1240,22 +1240,39 @@ export default function App() {
           const groundingMetadata = candidate && candidate.groundingMetadata;
           if (groundingMetadata) {
             finalGroundingMetadata = JSON.parse(JSON.stringify(groundingMetadata));
+            console.log("[Regenerate] Received groundingMetadata:", groundingMetadata);
+
             if (Array.isArray(groundingMetadata.groundingChunks)) {
               sources = groundingMetadata.groundingChunks
                 .map((chunk) => ({
                   uri: chunk.web?.uri,
                   title: chunk.web?.title,
                 }))
-                .filter((s) => s.uri && s.title);
+                .filter((s) => s.uri); // Relaxed filter: only require URI
             } else if (Array.isArray(groundingMetadata.groundingAttributions)) {
               sources = groundingMetadata.groundingAttributions
                 .map((attribution) => ({
                   uri: attribution.web?.uri,
                   title: attribution.web?.title,
                 }))
-                .filter((s) => s.uri && s.title);
+                .filter((s) => s.uri); // Relaxed filter: only require URI
             }
+            console.log("[Regenerate] Updated sources:", sources);
           }
+
+          // Update messages state immediately with whatever we have (text or metadata)
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === modelMessageId
+                ? {
+                    ...m,
+                    content: fullText,
+                    sources: sources || [],
+                    groundingMetadata: finalGroundingMetadata || null,
+                  }
+                : m
+            )
+          );
         }
 
         const thinkingProcess =
