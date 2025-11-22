@@ -124,7 +124,19 @@ export default function SettingsModal({
                       className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-black/5 transition-all"
                     />
                   </div> */}
-                   <InputWithIcon
+                     {(() => {
+                    const envApi = import.meta.env.VITE_GEMINI_API_KEY;
+
+                    if (envApi) {
+                      return (
+                        <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                          <p className="text-xs text-gray-600">
+                            ✓ Gemini API Key 已通过环境变量配置
+                          </p>
+                        </div>
+                      );
+                    }
+                    else{return( <InputWithIcon
                           id="geminiApiKey"
                           name="geminiApiKey"
                           label={null}
@@ -133,7 +145,8 @@ export default function SettingsModal({
                           onChange={(e) => setLocalGeminiKey(e.target.value)}
                           icon={<KeyRound size={16} />}
                           isPassword
-                        />
+                        />)}
+                  })()}
                 </div>
               </section>
 
@@ -378,7 +391,21 @@ export default function SettingsModal({
                         className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-black/5 transition-all"
                       />
                     </div> */}
-                        <InputWithIcon
+                        {(() => {
+                    const envApi = import.meta.env.VITE_GEMINI_API_KEY||null;
+                    if (envApi) {
+                      return (
+                        <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                          <p className="text-xs text-gray-600">
+                            ✓ Gemini API Key 已通过环境变量配置
+                          </p>
+                           <p className="text-xs text-gray-400 mt-1">
+                              配置来源：.env
+                            </p>
+                        </div>
+                      );
+                    }
+                    else{return( <InputWithIcon
                           id="geminiApiKey"
                           name="geminiApiKey"
                           label={null}
@@ -387,7 +414,8 @@ export default function SettingsModal({
                           onChange={(e) => setLocalGeminiKey(e.target.value)}
                           icon={<KeyRound size={16} />}
                           isPassword
-                        />
+                        />)}
+                  })()}
                   </div>
                 </section>
 
@@ -443,14 +471,14 @@ export default function SettingsModal({
                             icon={<KeyRound size={16} />}
                             isPassword
                           />
-                          {/* <div className="pt-2 flex justify-end">
+                          <div className="pt-2 flex justify-end">
                             <button
-                              onClick={onTestSchema}
+                              onClick={() => onTestSchema(sbConfig)}
                               className="text-xs text-gray-500 hover:text-black underline transition-colors"
                             >
-                              测试初始化步骤
+                              测试连接与数据库表
                             </button>
-                          </div> */}
+                          </div>
                         </div>
                       );
                     })()}

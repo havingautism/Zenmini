@@ -10,6 +10,8 @@ body {
 }
 
 #root {
-  @apply min-h-screen flex items-stretch justify-center;
+  /* Use dvh for mobile with vh fallback */
+  min-height: 100vh;
+  min-height: 100dvh;
+  @apply flex items-stretch justify-center;
 }
-

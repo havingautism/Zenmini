@@ -23,13 +23,9 @@ function loadSupabaseConfigFromEnv() {
 }
 
 function getOrCreateClientId() {
-  let clientId = null
-  try { clientId = localStorage.getItem('clientId') } catch {}
-  if (!clientId) {
-    clientId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2)
-    try { localStorage.setItem('clientId', clientId) } catch {}
-  }
-  return clientId
+  // Use a fixed shared client ID for all devices
+  // This matches the client_id used in database records ('shared-user')
+  return 'shared-user';
 }
 
 function initSupabase(config, clientId) {
