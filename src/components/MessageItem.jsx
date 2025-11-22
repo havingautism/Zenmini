@@ -131,7 +131,10 @@ export default function MessageItem({
             ) : isUser ? (
               <p className="whitespace-pre-wrap break-words">{msg.content}</p>
             ) : (
-              <MarkdownRenderer content={msg.content} groundingMetadata={msg.grounding_metadata} />
+              <MarkdownRenderer
+                content={msg.content}
+                groundingMetadata={msg.groundingMetadata || msg.grounding_metadata}
+              />
             )}
 
             {translatedText && (
