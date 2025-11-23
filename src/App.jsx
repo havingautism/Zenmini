@@ -1525,7 +1525,7 @@ export default function App() {
           <div className="flex flex-col items-center space-y-5">
             <button
               onClick={handleNewChat}
-              className="w-9 h-9 rounded-2xl bg-black text-white flex items-center justify-center shadow-soft-card"
+              className="w-9 h-9 rounded-2xl shadow-soft-card bg-black text-white flex items-center justify-center"
               title="新建对话"
             >
               <MessageSquarePlus size={18} />
@@ -1534,7 +1534,7 @@ export default function App() {
               <Bot size={16} />
             </button> */}
             <button
-              className="w-9 h-9 rounded-2xl bg-white/40 text-gray-300 border border-[#efe5da] flex items-center justify-center"
+              className="w-9 h-9 rounded-2xl shadow-soft-card bg-white/40 text-gray-300 border border-[#efe5da] flex items-center justify-center"
               title="会话历史"
               onClick={() => setIsSidebarOpen((prev) => !prev)}
             >
@@ -1545,91 +1545,120 @@ export default function App() {
 
         {/* 会话侧边栏（移动端，仅会话历史） */}
         {isSidebarOpen && (
-          <div className="sm:hidden absolute inset-y-3 left-3 right-3 max-w-[90vw] mx-auto rounded-3xl bg-white border border-gray-200 shadow-soft-card z-30 flex flex-col">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  所有对话
-                </span>
+          <div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/10 backdrop-blur-sm sm:hidden"
+            onClick={() => setIsSidebarOpen(false)}
+          >
+            <div
+              className="w-full h-[70vh] max-w-md rounded-t-3xl bg-white border border-gray-200 shadow-soft-card flex flex-col overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <h2 className="text-lg font-bold text-gray-900">会话历史</h2>
                 <button
                   type="button"
-                  onClick={handleNewChat}
-                  className="inline-flex items-center px-2 py-1 rounded-full text-[11px] bg-black text-white"
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors"
                 >
-                  <MessageSquarePlus size={12} className="mr-1" />
-                  新建
+                  <X size={20} />
                 </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsSidebarOpen(false)}
-                className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100"
-              >
-                ×
-              </button>
-            </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto px-3 py-2 space-y-1 text-sm">
-              {isConfigMissing && (
-                <div className="mb-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
-                  Supabase 配置缺失，请在设置中填写。
+              <div className="px-3 py-2 border-b border-gray-100">
+                <div className="relative">
+                  <Search
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    size={14}
+                  />
+                  <input
+                    type="text"
+                    placeholder="搜索对话..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full rounded-xl bg-gray-50 border-none py-2 pl-9 pr-3 text-xs text-gray-700 placeholder:text-gray-400 focus:ring-1 focus:ring-black/5 transition-all"
+                  />
                 </div>
-              )}
+              </div>
 
-              {sessions.length === 0 && (
-                <div className="text-xs text-gray-400 px-1 py-2">
-                  暂无会话，发送第一条消息开始聊天。
-                </div>
-              )}
+              <div className="flex-1 min-h-0 overflow-y-auto px-3 py-2 space-y-4 text-sm">
+                {isConfigMissing && (
+                  <div className="mb-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
+                    Supabase 配置缺失，请在设置中填写。
+                  </div>
+                )}
 
-              {sessions.map((session) => {
-                const isActive = activeSessionId === session.id;
-                return (
-                  <button
-                    key={session.id}
-                    onClick={() => {
-                      handleSelectSession(session.id);
-                      setIsSidebarOpen(false);
-                    }}
-                    className={`group flex w-full items-center rounded-2xl px-3 py-2 text-left transition-colors ${
-                      isActive
-                        ? "bg-black text-white"
-                        : "bg-white hover:bg-gray-100 text-gray-900"
-                    }`}
-                  >
-                    <div className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate text-sm font-medium">
-                        {session.title || "未命名对话"}
-                      </span>
-                      <span
-                        className={`mt-0.5 text-[11px] ${
-                          isActive ? "text-gray-300" : "text-gray-400"
-                        }`}
-                      >
-                        {formatSessionTime(
-                          session.created_at || session.createdAt
-                        )}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => handleDeleteSession(e, session)}
-                      className={`ml-2 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs transition-colors ${
-                        isActive
-                          ? "text-gray-300 hover:bg-red-50 hover:text-red-500"
-                          : "text-gray-400 hover:bg-red-50 hover:text-red-500"
-                      }`}
-                      title="删除会话"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </button>
-                );
-              })}
-            </div>
+                {sessions.length === 0 && (
+                  <div className="text-xs text-gray-400 px-1 py-2">
+                    暂无会话，发送第一条消息开始聊天。
+                  </div>
+                )}
 
-            <div className="border-t border-gray-100 px-4 py-3 text-[11px] text-gray-400 flex items-center justify-between">
-              <span>会话数：{sessions.length}</span>
+                {Object.entries(getGroupedSessions()).map(
+                  ([groupName, groupSessions]) => {
+                    if (groupSessions.length === 0) return null;
+                    return (
+                      <div key={groupName}>
+                        <div className="px-2 py-1 text-[10px] font-medium text-gray-400 uppercase tracking-wider">
+                          {groupName}
+                        </div>
+                        <div className="space-y-0.5 mt-1">
+                          {groupSessions.map((session) => {
+                            const isActive = activeSessionId === session.id;
+                            return (
+                              <button
+                                key={session.id}
+                                onClick={() => {
+                                  handleSelectSession(session.id);
+                                  setIsSidebarOpen(false);
+                                }}
+                                className={`group flex w-full items-center rounded-xl px-2 py-2 text-left transition-colors ${
+                                  isActive
+                                    ? "bg-black text-white"
+                                    : "bg-white hover:bg-gray-100 text-gray-900"
+                                }`}
+                              >
+                                <div className="flex min-w-0 flex-1 flex-col">
+                                  <span className="truncate text-sm font-medium">
+                                    {session.title || "未命名对话"}
+                                  </span>
+                                </div>
+                                {isActive && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) =>
+                                      handleDeleteSession(e, session)
+                                    }
+                                    className="ml-2 inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs text-gray-300 hover:bg-red-50 hover:text-red-500 transition-colors"
+                                    title="删除会话"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                )}
+                                {!isActive && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) =>
+                                      handleDeleteSession(e, session)
+                                    }
+                                    className="ml-2 hidden group-hover:inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                                    title="删除会话"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  }
+                )}
+              </div>
+
+              <div className="border-t border-gray-100 px-4 py-3 text-[11px] text-gray-400 flex items-center justify-between">
+                <span>会话数：{sessions.length}</span>
+              </div>
             </div>
           </div>
         )}
@@ -1740,7 +1769,7 @@ export default function App() {
 
         {/* 主内容区域 */}
         <div className="flex-1 flex flex-col min-h-0 w-full">
-          {/* 顶部栏：左侧小图标 + 右侧 Get Pro */}
+          {/* 顶部栏：左侧小图标 + 右侧设置 */}
           <header
             className={`flex items-center justify-between px-4 sm:px-8 py-2 sm:py-5 transition-all duration-200 ${
               isScrolled
@@ -1748,14 +1777,23 @@ export default function App() {
                 : "bg-transparent"
             }`}
           >
-            {/* 仅移动端显示的会话按钮 */}
-            <button
-              type="button"
-              className="w-8 h-8 rounded-2xl border border-[#e4d9ce] flex items-center justify-center text-gray-400 bg-white/80 sm:hidden"
-              onClick={() => setIsSidebarOpen(true)}
-            >
-              <LayoutGrid size={15} />
-            </button>
+            {/* 仅移动端显示的会话按钮 + 新建按钮 */}
+            <div className="flex items-center gap-2 sm:hidden">
+              <button
+                type="button"
+                className="w-8 h-8 rounded-2xl border shadow-soft-card border-[#e4d9ce] flex items-center justify-center text-gray-400 bg-white/80"
+                onClick={() => setIsSidebarOpen(true)}
+              >
+                <History size={15} color="black" />
+              </button>
+              <button
+                type="button"
+                onClick={handleNewChat}
+                className="w-8 h-8 rounded-2xl bg-black text-white flex items-center justify-center shadow-soft-card"
+              >
+                <MessageSquarePlus size={15} />
+              </button>
+            </div>
 
             <button
               type="button"

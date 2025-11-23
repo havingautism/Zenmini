@@ -43,7 +43,7 @@ export default function SettingsModal({
     { id: "chat", label: "对话", icon: MessageSquare },
     { id: "interface", label: "界面", icon: Monitor },
     { id: "model", label: "模型", icon: Cpu },
-    
+
     { id: "personalization", label: "个性化", icon: Palette },
     { id: "account", label: "账号", icon: User },
     { id: "about", label: "关于", icon: Info },
@@ -51,7 +51,7 @@ export default function SettingsModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/20 backdrop-blur-sm p-0 sm:p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/10 backdrop-blur-sm p-0 sm:p-4"
       onClick={onClose}
     >
       {/* Mobile: Bottom Sheet Style */}
@@ -124,7 +124,7 @@ export default function SettingsModal({
                       className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-black/5 transition-all"
                     />
                   </div> */}
-                     {(() => {
+                  {(() => {
                     const envApi = import.meta.env.VITE_GEMINI_API_KEY;
 
                     if (envApi) {
@@ -135,8 +135,9 @@ export default function SettingsModal({
                           </p>
                         </div>
                       );
-                    }
-                    else{return( <InputWithIcon
+                    } else {
+                      return (
+                        <InputWithIcon
                           id="geminiApiKey"
                           name="geminiApiKey"
                           label={null}
@@ -145,7 +146,9 @@ export default function SettingsModal({
                           onChange={(e) => setLocalGeminiKey(e.target.value)}
                           icon={<KeyRound size={16} />}
                           isPassword
-                        />)}
+                        />
+                      );
+                    }
                   })()}
                 </div>
               </section>
@@ -277,7 +280,7 @@ export default function SettingsModal({
                   </div>
                 </div>
               </div>
-              
+
               <div className="text-xs text-gray-400 pt-4">
                 <p>© 2025 Zenmini Project. All rights reserved.</p>
               </div>
@@ -303,13 +306,13 @@ export default function SettingsModal({
         <div className="px-4 py-3 border-t border-gray-100 flex space-x-2 bg-white">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+            className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors shadow-soft-card"
           >
             取消
           </button>
           <button
             onClick={handleSave}
-            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-black text-white hover:bg-gray-900 transition-colors"
+            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-black text-white hover:bg-gray-900 transition-colors shadow-soft-card"
           >
             保存
           </button>
@@ -391,31 +394,35 @@ export default function SettingsModal({
                         className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-black/5 transition-all"
                       />
                     </div> */}
-                        {(() => {
-                    const envApi = import.meta.env.VITE_GEMINI_API_KEY||null;
-                    if (envApi) {
-                      return (
-                        <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
-                          <p className="text-xs text-gray-600">
-                            ✓ Gemini API Key 已通过环境变量配置
-                          </p>
-                           <p className="text-xs text-gray-400 mt-1">
+                    {(() => {
+                      const envApi =
+                        import.meta.env.VITE_GEMINI_API_KEY || null;
+                      if (envApi) {
+                        return (
+                          <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                            <p className="text-xs text-gray-600">
+                              ✓ Gemini API Key 已通过环境变量配置
+                            </p>
+                            <p className="text-xs text-gray-400 mt-1">
                               配置来源：.env
                             </p>
-                        </div>
-                      );
-                    }
-                    else{return( <InputWithIcon
-                          id="geminiApiKey"
-                          name="geminiApiKey"
-                          label={null}
-                          placeholder="g-..."
-                          value={localGeminiKey}
-                          onChange={(e) => setLocalGeminiKey(e.target.value)}
-                          icon={<KeyRound size={16} />}
-                          isPassword
-                        />)}
-                  })()}
+                          </div>
+                        );
+                      } else {
+                        return (
+                          <InputWithIcon
+                            id="geminiApiKey"
+                            name="geminiApiKey"
+                            label={null}
+                            placeholder="g-..."
+                            value={localGeminiKey}
+                            onChange={(e) => setLocalGeminiKey(e.target.value)}
+                            icon={<KeyRound size={16} />}
+                            isPassword
+                          />
+                        );
+                      }
+                    })()}
                   </div>
                 </section>
 
@@ -453,7 +460,10 @@ export default function SettingsModal({
                             label="Supabase URL"
                             value={sbConfig.url}
                             onChange={(e) =>
-                              setSbConfig((p) => ({ ...p, url: e.target.value }))
+                              setSbConfig((p) => ({
+                                ...p,
+                                url: e.target.value,
+                              }))
                             }
                             icon={<Link size={16} />}
                           />
@@ -605,4 +615,3 @@ export default function SettingsModal({
     </div>
   );
 }
-
