@@ -55,7 +55,11 @@ import {
   loadSupabaseConfigFromLocalStorage,
   getOrCreateClientId,
 } from "./services/supabase";
-import { initSchemaIfFirstUse, getSchemaSql, detectTables } from "./services/schema";
+import {
+  initSchemaIfFirstUse,
+  getSchemaSql,
+  detectTables,
+} from "./services/schema";
 import {
   subscribeSessions,
   subscribeMessages,
@@ -73,7 +77,6 @@ import SchemaInitModal from "./components/SchemaInitModal";
 import Loader from "./components/Loader";
 import BlackHole from "./components/BlackHole";
 import SuggestedReplyMarkdown from "./components/SuggestedReplyMarkdown";
-
 
 export default function App() {
   const [client, setClient] = useState(null);
@@ -166,12 +169,15 @@ export default function App() {
       console.log("[initApp] Config from env:", configToUse);
     }
     if (configToUse) setLocalSbConfig(configToUse);
-    
+
     if (configToUse && configToUse.url && configToUse.anonKey) {
       console.log("[initApp] Config valid, initializing Supabase...");
       try {
         const { client } = initSupabase(configToUse, cid);
-        console.log("[initApp] Supabase client created:", client ? "SUCCESS" : "FAILED");
+        console.log(
+          "[initApp] Supabase client created:",
+          client ? "SUCCESS" : "FAILED"
+        );
         setClient(client);
         setIsConfigMissing(false);
         await initSchemaIfFirstUse(client, setNeedsSchemaInit, setSchemaSql);
@@ -231,7 +237,7 @@ export default function App() {
 
   useEffect(() => {
     if (!isModelMenuOpen) return;
-    
+
     // Add a small delay before enabling click-outside-to-close
     // to prevent immediate closing when opening the menu
     const timeoutId = setTimeout(() => {
@@ -244,12 +250,12 @@ export default function App() {
         }
       };
       document.addEventListener("mousedown", handleClickOutside);
-      
+
       return () => {
         document.removeEventListener("mousedown", handleClickOutside);
       };
     }, 100);
-    
+
     return () => {
       clearTimeout(timeoutId);
     };
@@ -509,15 +515,17 @@ export default function App() {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const groups = {
-      "今天": [],
-      "昨天": [],
+      今天: [],
+      昨天: [],
       "过去 7 天": [],
       "过去 30 天": [],
-      "更早": [],
+      更早: [],
     };
 
     const filteredSessions = sessions.filter((s) =>
-      (s.title || "未命名对话").toLowerCase().includes(searchQuery.toLowerCase())
+      (s.title || "未命名对话")
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase())
     );
 
     filteredSessions.forEach((session) => {
@@ -566,7 +574,10 @@ export default function App() {
     setIsSessionActive(true);
 
     const userMessage = {
-      id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `user-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      id:
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `user-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       role: "user",
       content: trimmed,
       created_at: new Date().toISOString(),
@@ -611,12 +622,14 @@ export default function App() {
 
       const modelToUse = selectedModel;
 
-      modelMessageId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `model-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      modelMessageId =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `model-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       modelCreatedAt = new Date().toISOString();
       setMessages((prev) => [
         ...prev,
         {
-
           id: modelMessageId,
           role: "model",
           content: "",
@@ -663,176 +676,185 @@ export default function App() {
 
       console.log("params", params);
 
-    
-        let stream;
-        try {
-          stream = await aiClient.models.generateContentStream(params);
-        } catch (e) {
-          throw e;
+      let stream;
+      try {
+        stream = await aiClient.models.generateContentStream(params);
+      } catch (e) {
+        throw e;
+      }
+
+      let fullText = "";
+      const thoughtParts = [];
+      let sources = [];
+      let finalGroundingMetadata = null;
+
+      for await (const chunk of stream) {
+        const delta = chunk.text || "";
+        if (delta) {
+          fullText += delta;
         }
 
-        let fullText = "";
-        const thoughtParts = [];
-        let sources = [];
-        let finalGroundingMetadata = null;
+        const candidate =
+          chunk.candidates && chunk.candidates.length > 0
+            ? chunk.candidates[0]
+            : null;
 
-        for await (const chunk of stream) {
-          const delta = chunk.text || "";
-          if (delta) {
-            fullText += delta;
-          }
-
-          const candidate =
-            chunk.candidates && chunk.candidates.length > 0
-              ? chunk.candidates[0]
-              : null;
-
-          if (
-            candidate &&
-            candidate.content &&
-            Array.isArray(candidate.content.parts)
-          ) {
-            candidate.content.parts.forEach((part) => {
-              if (part.thought && part.text) {
-                thoughtParts.push(part.text);
-              }
-            });
-          }
-
-          const groundingMetadata = candidate && candidate.groundingMetadata;
-          if (groundingMetadata) {
-            finalGroundingMetadata = JSON.parse(JSON.stringify(groundingMetadata));
-            console.log("[Stream] Received groundingMetadata:", groundingMetadata);
-
-            if (Array.isArray(groundingMetadata.groundingChunks)) {
-              sources = groundingMetadata.groundingChunks
-                .map((chunk) => ({
-                  uri: chunk.web?.uri,
-                  title: chunk.web?.title,
-                }))
-                .filter((s) => s.uri); // Relaxed filter: only require URI
-            } else if (Array.isArray(groundingMetadata.groundingAttributions)) {
-              sources = groundingMetadata.groundingAttributions
-                .map((attribution) => ({
-                  uri: attribution.web?.uri,
-                  title: attribution.web?.title,
-                }))
-                .filter((s) => s.uri); // Relaxed filter: only require URI
+        if (
+          candidate &&
+          candidate.content &&
+          Array.isArray(candidate.content.parts)
+        ) {
+          candidate.content.parts.forEach((part) => {
+            if (part.thought && part.text) {
+              thoughtParts.push(part.text);
             }
-            console.log("[Stream] Updated sources:", sources);
-          }
-
-          // Update messages state immediately with whatever we have (text or metadata)
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === modelMessageId
-                ? {
-                    ...m,
-                    content: fullText,
-                    sources: sources || [],
-                    groundingMetadata: finalGroundingMetadata || null,
-                  }
-                : m
-            )
-          );
+          });
         }
 
-        const thinkingProcess =
-          thoughtParts.length > 0 ? thoughtParts.join("").trim() || null : null;
+        const groundingMetadata = candidate && candidate.groundingMetadata;
+        if (groundingMetadata) {
+          finalGroundingMetadata = JSON.parse(
+            JSON.stringify(groundingMetadata)
+          );
+          console.log(
+            "[Stream] Received groundingMetadata:",
+            groundingMetadata
+          );
 
+          if (Array.isArray(groundingMetadata.groundingChunks)) {
+            sources = groundingMetadata.groundingChunks
+              .map((chunk) => ({
+                uri: chunk.web?.uri,
+                title: chunk.web?.title,
+              }))
+              .filter((s) => s.uri); // Relaxed filter: only require URI
+          } else if (Array.isArray(groundingMetadata.groundingAttributions)) {
+            sources = groundingMetadata.groundingAttributions
+              .map((attribution) => ({
+                uri: attribution.web?.uri,
+                title: attribution.web?.title,
+              }))
+              .filter((s) => s.uri); // Relaxed filter: only require URI
+          }
+          console.log("[Stream] Updated sources:", sources);
+        }
+
+        // Update messages state immediately with whatever we have (text or metadata)
         setMessages((prev) =>
           prev.map((m) =>
             m.id === modelMessageId
               ? {
                   ...m,
                   content: fullText,
-                  thinkingProcess,
                   sources: sources || [],
                   groundingMetadata: finalGroundingMetadata || null,
-                  generatedWithThinking: !!thinkingProcess,
-                  generatedWithSearch: isSearchMode,
-                  isLoading: false,
                 }
               : m
           )
         );
+      }
 
-        const finalHistoryForReplies = [
-          ...historyForApi,
-          { role: "model", parts: [{ text: fullText }] },
-        ];
+      const thinkingProcess =
+        thoughtParts.length > 0 ? thoughtParts.join("").trim() || null : null;
 
-        let suggestedReplies = [];
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === modelMessageId
+            ? {
+                ...m,
+                content: fullText,
+                thinkingProcess,
+                sources: sources || [],
+                groundingMetadata: finalGroundingMetadata || null,
+                generatedWithThinking: !!thinkingProcess,
+                generatedWithSearch: isSearchMode,
+                isLoading: false,
+              }
+            : m
+        )
+      );
+
+      const finalHistoryForReplies = [
+        ...historyForApi,
+        { role: "model", parts: [{ text: fullText }] },
+      ];
+
+      let suggestedReplies = [];
+      try {
+        suggestedReplies = await fetchSuggestedReplies(
+          finalHistoryForReplies,
+          false
+        );
+        setSuggestedReplies(suggestedReplies);
+      } catch (e) {
+        console.error("Failed to fetch suggested replies:", e);
+        setSuggestedReplies([]);
+      }
+
+      setTimeout(async () => {
         try {
-          suggestedReplies = await fetchSuggestedReplies(
-            finalHistoryForReplies,
-            false
+          await addUserMessage(
+            db,
+            appId,
+            userId,
+            currentSessionId,
+            trimmed,
+            userMessage.created_at
           );
-          setSuggestedReplies(suggestedReplies);
+
+          const messageData = {
+            content: fullText,
+            thinkingProcess,
+            sources: sources || [],
+            suggestedReplies,
+            generatedWithThinking: !!thinkingProcess,
+            generatedWithSearch: isSearchMode,
+            groundingMetadata: finalGroundingMetadata || null,
+            createdAt: modelCreatedAt,
+          };
+
+          await addModelMessage(
+            db,
+            appId,
+            userId,
+            currentSessionId,
+            messageData
+          );
         } catch (e) {
-          console.error("Failed to fetch suggested replies:", e);
-          setSuggestedReplies([]);
+          console.error("Failed to save messages:", e);
         }
+      }, 200);
 
-        setTimeout(async () => {
-          try {
-            await addUserMessage(
-              db,
-              appId,
-              userId,
-              currentSessionId,
-              trimmed,
-              userMessage.created_at
-            );
-
-            const messageData = {
-              content: fullText,
-              thinkingProcess,
-              sources: sources || [],
-              suggestedReplies,
-              generatedWithThinking: !!thinkingProcess,
-              generatedWithSearch: isSearchMode,
-              groundingMetadata: finalGroundingMetadata || null,
-              createdAt: modelCreatedAt,
-            };
-
-            await addModelMessage(db, appId, userId, currentSessionId, messageData);
-          } catch (e) {
-            console.error("Failed to save messages:", e);
-          }
-        }, 200);
-
-        if (isAutoPlayTts && fullText) {
-          handleStopAudio();
-          try {
-            const { audioData, mimeType } = await callGeminiTtsApi(
-              fullText,
-              userApiKey
-            );
-            if (!mimeType.includes("rate="))
-              throw new Error("Invalid TTS mimeType");
-            const sampleRate = parseInt(mimeType.match(/rate=(\d+)/)[1], 10);
-            const pcmData = base64ToArrayBuffer(audioData);
-            const pcm16 = new Int16Array(pcmData);
-            const wavBlob = pcmToWav(pcm16, sampleRate);
-            const audioUrl = URL.createObjectURL(wavBlob);
-            const audio = new Audio(audioUrl);
-            setCurrentAudio(audio);
-            setPlayingMessageId("auto-play");
-            audio.play();
-            audio.onended = () => {
-              setPlayingMessageId(null);
-              setCurrentAudio(null);
-              URL.revokeObjectURL(audioUrl);
-            };
-          } catch (ttsError) {
-            console.error("Auto-play TTS failed:", ttsError);
-            if (currentAudio) currentAudio.pause();
-            setCurrentAudio(null);
+      if (isAutoPlayTts && fullText) {
+        handleStopAudio();
+        try {
+          const { audioData, mimeType } = await callGeminiTtsApi(
+            fullText,
+            userApiKey
+          );
+          if (!mimeType.includes("rate="))
+            throw new Error("Invalid TTS mimeType");
+          const sampleRate = parseInt(mimeType.match(/rate=(\d+)/)[1], 10);
+          const pcmData = base64ToArrayBuffer(audioData);
+          const pcm16 = new Int16Array(pcmData);
+          const wavBlob = pcmToWav(pcm16, sampleRate);
+          const audioUrl = URL.createObjectURL(wavBlob);
+          const audio = new Audio(audioUrl);
+          setCurrentAudio(audio);
+          setPlayingMessageId("auto-play");
+          audio.play();
+          audio.onended = () => {
             setPlayingMessageId(null);
-          }
+            setCurrentAudio(null);
+            URL.revokeObjectURL(audioUrl);
+          };
+        } catch (ttsError) {
+          console.error("Auto-play TTS failed:", ttsError);
+          if (currentAudio) currentAudio.pause();
+          setCurrentAudio(null);
+          setPlayingMessageId(null);
         }
-      
+      }
     } catch (error) {
       console.error("Error sending message:", error);
       setMessages((prev) => {
@@ -841,7 +863,10 @@ export default function App() {
         return [
           ...cleaned,
           {
-            id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `error-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            id:
+              typeof crypto !== "undefined" && crypto.randomUUID
+                ? crypto.randomUUID()
+                : `error-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             role: "model",
             content: "抱歉，发送消息时出错，请重试。",
             created_at: new Date().toISOString(),
@@ -959,8 +984,6 @@ export default function App() {
           generatedWithSearch: isSearchMode,
           createdAt: modelMessage.created_at,
         };
-
-   
 
         addModelMessage(db, appId, userId, currentSessionId, messageData).catch(
           (e) => console.error("Failed to save model message:", e)
@@ -1174,7 +1197,10 @@ export default function App() {
       const baseMessages = messages.slice(0, lastUserMessageIndex + 1);
 
       // 删除本地 UI 中最后一条用户消息之后的所有模型回复
-      modelMessageId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `model-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      modelMessageId =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `model-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       modelCreatedAt = new Date().toISOString();
       setMessages([
         ...baseMessages,
@@ -1203,10 +1229,11 @@ export default function App() {
         .filter((id) => {
           // 检查是否为UUID格式（简单检查：包含连字符且不以error-/user-/model-开头）
           // 或者是新格式的UUID（crypto.randomUUID生成的）
-          const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          const uuidPattern =
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
           return uuidPattern.test(id);
         });
-      
+
       if (validMessageIds.length > 0) {
         await deleteMessages(
           db,
@@ -1253,161 +1280,171 @@ export default function App() {
 
       console.log("Regenerate params", params);
 
-        const stream = await aiClient.models.generateContentStream(params);
+      const stream = await aiClient.models.generateContentStream(params);
 
-        let fullText = "";
-        const thoughtParts = [];
-        let sources = [];
-        let finalGroundingMetadata = null;
+      let fullText = "";
+      const thoughtParts = [];
+      let sources = [];
+      let finalGroundingMetadata = null;
 
-        for await (const chunk of stream) {
-          const delta = chunk.text || "";
-          if (delta) {
-            fullText += delta;
-          }
-
-          const candidate =
-            chunk.candidates && chunk.candidates.length > 0
-              ? chunk.candidates[0]
-              : null;
-
-          if (
-            candidate &&
-            candidate.content &&
-            Array.isArray(candidate.content.parts)
-          ) {
-            candidate.content.parts.forEach((part) => {
-              if (part.thought && part.text) {
-                thoughtParts.push(part.text);
-              }
-            });
-          }
-
-          const groundingMetadata = candidate && candidate.groundingMetadata;
-          if (groundingMetadata) {
-            finalGroundingMetadata = JSON.parse(JSON.stringify(groundingMetadata));
-            console.log("[Regenerate] Received groundingMetadata:", groundingMetadata);
-
-            if (Array.isArray(groundingMetadata.groundingChunks)) {
-              sources = groundingMetadata.groundingChunks
-                .map((chunk) => ({
-                  uri: chunk.web?.uri,
-                  title: chunk.web?.title,
-                }))
-                .filter((s) => s.uri); // Relaxed filter: only require URI
-            } else if (Array.isArray(groundingMetadata.groundingAttributions)) {
-              sources = groundingMetadata.groundingAttributions
-                .map((attribution) => ({
-                  uri: attribution.web?.uri,
-                  title: attribution.web?.title,
-                }))
-                .filter((s) => s.uri); // Relaxed filter: only require URI
-            }
-            console.log("[Regenerate] Updated sources:", sources);
-          }
-
-          // Update messages state immediately with whatever we have (text or metadata)
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === modelMessageId
-                ? {
-                    ...m,
-                    content: fullText,
-                    sources: sources || [],
-                    groundingMetadata: finalGroundingMetadata || null,
-                  }
-                : m
-            )
-          );
+      for await (const chunk of stream) {
+        const delta = chunk.text || "";
+        if (delta) {
+          fullText += delta;
         }
 
-        const thinkingProcess =
-          thoughtParts.length > 0 ? thoughtParts.join("").trim() || null : null;
+        const candidate =
+          chunk.candidates && chunk.candidates.length > 0
+            ? chunk.candidates[0]
+            : null;
 
+        if (
+          candidate &&
+          candidate.content &&
+          Array.isArray(candidate.content.parts)
+        ) {
+          candidate.content.parts.forEach((part) => {
+            if (part.thought && part.text) {
+              thoughtParts.push(part.text);
+            }
+          });
+        }
+
+        const groundingMetadata = candidate && candidate.groundingMetadata;
+        if (groundingMetadata) {
+          finalGroundingMetadata = JSON.parse(
+            JSON.stringify(groundingMetadata)
+          );
+          console.log(
+            "[Regenerate] Received groundingMetadata:",
+            groundingMetadata
+          );
+
+          if (Array.isArray(groundingMetadata.groundingChunks)) {
+            sources = groundingMetadata.groundingChunks
+              .map((chunk) => ({
+                uri: chunk.web?.uri,
+                title: chunk.web?.title,
+              }))
+              .filter((s) => s.uri); // Relaxed filter: only require URI
+          } else if (Array.isArray(groundingMetadata.groundingAttributions)) {
+            sources = groundingMetadata.groundingAttributions
+              .map((attribution) => ({
+                uri: attribution.web?.uri,
+                title: attribution.web?.title,
+              }))
+              .filter((s) => s.uri); // Relaxed filter: only require URI
+          }
+          console.log("[Regenerate] Updated sources:", sources);
+        }
+
+        // Update messages state immediately with whatever we have (text or metadata)
         setMessages((prev) =>
           prev.map((m) =>
             m.id === modelMessageId
               ? {
                   ...m,
                   content: fullText,
-                  thinkingProcess,
                   sources: sources || [],
                   groundingMetadata: finalGroundingMetadata || null,
-                  generatedWithThinking: !!thinkingProcess,
-                  generatedWithSearch: isSearchMode,
-                  isLoading: false,
                 }
               : m
           )
         );
+      }
 
-        const finalHistoryForReplies = [
-          ...historyForApi,
-          { role: "model", parts: [{ text: fullText }] },
-        ];
+      const thinkingProcess =
+        thoughtParts.length > 0 ? thoughtParts.join("").trim() || null : null;
 
-        let suggestedReplies = [];
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === modelMessageId
+            ? {
+                ...m,
+                content: fullText,
+                thinkingProcess,
+                sources: sources || [],
+                groundingMetadata: finalGroundingMetadata || null,
+                generatedWithThinking: !!thinkingProcess,
+                generatedWithSearch: isSearchMode,
+                isLoading: false,
+              }
+            : m
+        )
+      );
+
+      const finalHistoryForReplies = [
+        ...historyForApi,
+        { role: "model", parts: [{ text: fullText }] },
+      ];
+
+      let suggestedReplies = [];
+      try {
+        suggestedReplies = await fetchSuggestedReplies(
+          finalHistoryForReplies,
+          false
+        );
+        setSuggestedReplies(suggestedReplies);
+      } catch (e) {
+        console.error("Failed to fetch suggested replies:", e);
+        setSuggestedReplies([]);
+      }
+
+      setTimeout(async () => {
         try {
-          suggestedReplies = await fetchSuggestedReplies(
-            finalHistoryForReplies,
-            false
+          const messageData = {
+            content: fullText,
+            thinkingProcess,
+            sources: sources || [],
+            suggestedReplies,
+            generatedWithThinking: !!thinkingProcess,
+            generatedWithSearch: isSearchMode,
+            groundingMetadata: finalGroundingMetadata || null,
+            createdAt: modelCreatedAt,
+          };
+
+          await addModelMessage(
+            db,
+            appId,
+            userId,
+            activeSessionId,
+            messageData
           );
-          setSuggestedReplies(suggestedReplies);
         } catch (e) {
-          console.error("Failed to fetch suggested replies:", e);
-          setSuggestedReplies([]);
+          console.error("Failed to save regenerated message:", e);
         }
+      }, 200);
 
-        setTimeout(async () => {
-          try {
-            const messageData = {
-              content: fullText,
-              thinkingProcess,
-              sources: sources || [],
-              suggestedReplies,
-              generatedWithThinking: !!thinkingProcess,
-              generatedWithSearch: isSearchMode,
-              groundingMetadata: finalGroundingMetadata || null,
-              createdAt: modelCreatedAt,
-            };
-
-            await addModelMessage(db, appId, userId, activeSessionId, messageData);
-          } catch (e) {
-            console.error("Failed to save regenerated message:", e);
-          }
-        }, 200);
-
-        if (isAutoPlayTts && fullText) {
-          handleStopAudio();
-          try {
-            const { audioData, mimeType } = await callGeminiTtsApi(
-              fullText,
-              userApiKey
-            );
-            if (!mimeType.includes("rate="))
-              throw new Error("Invalid TTS mimeType");
-            const sampleRate = parseInt(mimeType.match(/rate=(\d+)/)[1], 10);
-            const pcmData = base64ToArrayBuffer(audioData);
-            const pcm16 = new Int16Array(pcmData);
-            const wavBlob = pcmToWav(pcm16, sampleRate);
-            const audioUrl = URL.createObjectURL(wavBlob);
-            const audio = new Audio(audioUrl);
-            setCurrentAudio(audio);
-            setPlayingMessageId("auto-play");
-            audio.play();
-            audio.onended = () => {
-              setPlayingMessageId(null);
-              setCurrentAudio(null);
-              URL.revokeObjectURL(audioUrl);
-            };
-          } catch (ttsError) {
-            console.error("Auto-play TTS failed:", ttsError);
-            if (currentAudio) currentAudio.pause();
-            setCurrentAudio(null);
+      if (isAutoPlayTts && fullText) {
+        handleStopAudio();
+        try {
+          const { audioData, mimeType } = await callGeminiTtsApi(
+            fullText,
+            userApiKey
+          );
+          if (!mimeType.includes("rate="))
+            throw new Error("Invalid TTS mimeType");
+          const sampleRate = parseInt(mimeType.match(/rate=(\d+)/)[1], 10);
+          const pcmData = base64ToArrayBuffer(audioData);
+          const pcm16 = new Int16Array(pcmData);
+          const wavBlob = pcmToWav(pcm16, sampleRate);
+          const audioUrl = URL.createObjectURL(wavBlob);
+          const audio = new Audio(audioUrl);
+          setCurrentAudio(audio);
+          setPlayingMessageId("auto-play");
+          audio.play();
+          audio.onended = () => {
             setPlayingMessageId(null);
-          }
+            setCurrentAudio(null);
+            URL.revokeObjectURL(audioUrl);
+          };
+        } catch (ttsError) {
+          console.error("Auto-play TTS failed:", ttsError);
+          if (currentAudio) currentAudio.pause();
+          setCurrentAudio(null);
+          setPlayingMessageId(null);
         }
-      
+      }
     } catch (e) {
       console.error("Error regenerating message:", e);
       // 失败时移除加载气泡并给出错误提示
@@ -1416,7 +1453,10 @@ export default function App() {
         return [
           ...cleaned,
           {
-            id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `error-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            id:
+              typeof crypto !== "undefined" && crypto.randomUUID
+                ? crypto.randomUUID()
+                : `error-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             role: "model",
             content: "抱歉，重新生成回答时出错，请重试。",
             created_at: new Date().toISOString(),
@@ -1430,7 +1470,7 @@ export default function App() {
 
   const handleTestSchema = async (config) => {
     const cfg = config || localSbConfig;
-    
+
     if (!cfg || !cfg.url || !cfg.anonKey) {
       alert("请先填写 Supabase URL 和 Anon Key");
       return;
@@ -1461,7 +1501,10 @@ export default function App() {
       console.log("=== Zenmini Debug Info ===");
       console.log("userId:", userId);
       console.log("client (db):", client ? "Connected" : "NULL");
-      console.log("userApiKey:", userApiKey ? "SET (length: " + userApiKey.length + ")" : "NULL");
+      console.log(
+        "userApiKey:",
+        userApiKey ? "SET (length: " + userApiKey.length + ")" : "NULL"
+      );
       console.log("isLoading:", isLoading);
       console.log("activeSessionId:", activeSessionId);
       console.log("isAuthReady:", isAuthReady);
@@ -1474,16 +1517,15 @@ export default function App() {
     };
   }, [userId, client, userApiKey, isLoading, activeSessionId, isAuthReady]);
 
-
   return (
-    <div className="h-screen w-full bg-gray-100 flex items-center justify-center p-2 text-gray-900">
-      <div className="relative flex w-full  h-full  bg-white rounded-4xl shadow-soft-card border border-gray-200 overflow-hidden">
+    <div className="h-screen w-full bg-gray-100 flex items-center justify-center p-0 sm:p-2 text-gray-900">
+      <div className="relative flex w-full  h-full  bg-white rounded-none sm:rounded-4xl shadow-soft-card border border-gray-200 overflow-hidden">
         {/* 左侧竖向图标栏（桌面端可见） */}
         <div className="hidden sm:flex flex-col justify-between py-5 px-8 w-12">
           <div className="flex flex-col items-center space-y-5">
             <button
               onClick={handleNewChat}
-              className="w-9 h-9 rounded-2xl bg-black text-white flex items-center justify-center shadow-soft-card"
+              className="w-9 h-9 rounded-2xl shadow-soft-card bg-black text-white flex items-center justify-center"
               title="新建对话"
             >
               <MessageSquarePlus size={18} />
@@ -1492,7 +1534,7 @@ export default function App() {
               <Bot size={16} />
             </button> */}
             <button
-              className="w-9 h-9 rounded-2xl bg-white/40 text-gray-300 border border-[#efe5da] flex items-center justify-center"
+              className="w-9 h-9 rounded-2xl shadow-soft-card bg-white/40 text-gray-300 border border-[#efe5da] flex items-center justify-center"
               title="会话历史"
               onClick={() => setIsSidebarOpen((prev) => !prev)}
             >
@@ -1503,91 +1545,120 @@ export default function App() {
 
         {/* 会话侧边栏（移动端，仅会话历史） */}
         {isSidebarOpen && (
-          <div className="sm:hidden absolute inset-y-3 left-3 right-3 max-w-[90vw] mx-auto rounded-3xl bg-white border border-gray-200 shadow-soft-card z-30 flex flex-col">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  所有对话
-                </span>
+          <div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/10 backdrop-blur-sm sm:hidden"
+            onClick={() => setIsSidebarOpen(false)}
+          >
+            <div
+              className="w-full h-[70vh] max-w-md rounded-t-3xl bg-white border border-gray-200 shadow-soft-card flex flex-col overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <h2 className="text-lg font-bold text-gray-900">会话历史</h2>
                 <button
                   type="button"
-                  onClick={handleNewChat}
-                  className="inline-flex items-center px-2 py-1 rounded-full text-[11px] bg-black text-white"
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors"
                 >
-                  <MessageSquarePlus size={12} className="mr-1" />
-                  新建
+                  <X size={20} />
                 </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsSidebarOpen(false)}
-                className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100"
-              >
-                ×
-              </button>
-            </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto px-3 py-2 space-y-1 text-sm">
-              {isConfigMissing && (
-                <div className="mb-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
-                  Supabase 配置缺失，请在设置中填写。
+              <div className="px-3 py-2 border-b border-gray-100">
+                <div className="relative">
+                  <Search
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    size={14}
+                  />
+                  <input
+                    type="text"
+                    placeholder="搜索对话..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full rounded-xl bg-gray-50 border-none py-2 pl-9 pr-3 text-xs text-gray-700 placeholder:text-gray-400 focus:ring-1 focus:ring-black/5 transition-all"
+                  />
                 </div>
-              )}
+              </div>
 
-              {sessions.length === 0 && (
-                <div className="text-xs text-gray-400 px-1 py-2">
-                  暂无会话，发送第一条消息开始聊天。
-                </div>
-              )}
+              <div className="flex-1 min-h-0 overflow-y-auto px-3 py-2 space-y-4 text-sm">
+                {isConfigMissing && (
+                  <div className="mb-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
+                    Supabase 配置缺失，请在设置中填写。
+                  </div>
+                )}
 
-              {sessions.map((session) => {
-                const isActive = activeSessionId === session.id;
-                return (
-                  <button
-                    key={session.id}
-                    onClick={() => {
-                      handleSelectSession(session.id);
-                      setIsSidebarOpen(false);
-                    }}
-                    className={`group flex w-full items-center rounded-2xl px-3 py-2 text-left transition-colors ${
-                      isActive
-                        ? "bg-black text-white"
-                        : "bg-white hover:bg-gray-100 text-gray-900"
-                    }`}
-                  >
-                    <div className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate text-sm font-medium">
-                        {session.title || "未命名对话"}
-                      </span>
-                      <span
-                        className={`mt-0.5 text-[11px] ${
-                          isActive ? "text-gray-300" : "text-gray-400"
-                        }`}
-                      >
-                        {formatSessionTime(
-                          session.created_at || session.createdAt
-                        )}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => handleDeleteSession(e, session)}
-                      className={`ml-2 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs transition-colors ${
-                        isActive
-                          ? "text-gray-300 hover:bg-red-50 hover:text-red-500"
-                          : "text-gray-400 hover:bg-red-50 hover:text-red-500"
-                      }`}
-                      title="删除会话"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </button>
-                );
-              })}
-            </div>
+                {sessions.length === 0 && (
+                  <div className="text-xs text-gray-400 px-1 py-2">
+                    暂无会话，发送第一条消息开始聊天。
+                  </div>
+                )}
 
-            <div className="border-t border-gray-100 px-4 py-3 text-[11px] text-gray-400 flex items-center justify-between">
-              <span>会话数：{sessions.length}</span>
+                {Object.entries(getGroupedSessions()).map(
+                  ([groupName, groupSessions]) => {
+                    if (groupSessions.length === 0) return null;
+                    return (
+                      <div key={groupName}>
+                        <div className="px-2 py-1 text-[10px] font-medium text-gray-400 uppercase tracking-wider">
+                          {groupName}
+                        </div>
+                        <div className="space-y-0.5 mt-1">
+                          {groupSessions.map((session) => {
+                            const isActive = activeSessionId === session.id;
+                            return (
+                              <button
+                                key={session.id}
+                                onClick={() => {
+                                  handleSelectSession(session.id);
+                                  setIsSidebarOpen(false);
+                                }}
+                                className={`group flex w-full items-center rounded-xl px-2 py-2 text-left transition-colors ${
+                                  isActive
+                                    ? "bg-black text-white"
+                                    : "bg-white hover:bg-gray-100 text-gray-900"
+                                }`}
+                              >
+                                <div className="flex min-w-0 flex-1 flex-col">
+                                  <span className="truncate text-sm font-medium">
+                                    {session.title || "未命名对话"}
+                                  </span>
+                                </div>
+                                {isActive && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) =>
+                                      handleDeleteSession(e, session)
+                                    }
+                                    className="ml-2 inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs text-gray-300 hover:bg-red-50 hover:text-red-500 transition-colors"
+                                    title="删除会话"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                )}
+                                {!isActive && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) =>
+                                      handleDeleteSession(e, session)
+                                    }
+                                    className="ml-2 hidden group-hover:inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                                    title="删除会话"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  }
+                )}
+              </div>
+
+              <div className="border-t border-gray-100 px-4 py-3 text-[11px] text-gray-400 flex items-center justify-between">
+                <span>会话数：{sessions.length}</span>
+              </div>
             </div>
           </div>
         )}
@@ -1631,58 +1702,64 @@ export default function App() {
                 </div>
               )}
 
-              {Object.entries(getGroupedSessions()).map(([groupName, groupSessions]) => {
-                if (groupSessions.length === 0) return null;
-                return (
-                  <div key={groupName}>
-                    <div className="px-2 py-1 text-[10px] font-medium text-gray-400 uppercase tracking-wider">
-                      {groupName}
+              {Object.entries(getGroupedSessions()).map(
+                ([groupName, groupSessions]) => {
+                  if (groupSessions.length === 0) return null;
+                  return (
+                    <div key={groupName}>
+                      <div className="px-2 py-1 text-[10px] font-medium text-gray-400 uppercase tracking-wider">
+                        {groupName}
+                      </div>
+                      <div className="space-y-0.5 mt-1">
+                        {groupSessions.map((session) => {
+                          const isActive = activeSessionId === session.id;
+                          return (
+                            <button
+                              key={session.id}
+                              onClick={() => handleSelectSession(session.id)}
+                              className={`group flex w-full items-center rounded-xl px-2 py-2 text-left transition-colors ${
+                                isActive
+                                  ? "bg-black text-white"
+                                  : "bg-white hover:bg-gray-100 text-gray-900"
+                              }`}
+                            >
+                              <div className="flex min-w-0 flex-1 flex-col">
+                                <span className="truncate text-sm font-medium">
+                                  {session.title || "未命名对话"}
+                                </span>
+                              </div>
+                              {isActive && (
+                                <button
+                                  type="button"
+                                  onClick={(e) =>
+                                    handleDeleteSession(e, session)
+                                  }
+                                  className="ml-2 inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
+                                  title="删除会话"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              )}
+                              {!isActive && (
+                                <button
+                                  type="button"
+                                  onClick={(e) =>
+                                    handleDeleteSession(e, session)
+                                  }
+                                  className="ml-2 hidden group-hover:inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                                  title="删除会话"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div className="space-y-0.5 mt-1">
-                      {groupSessions.map((session) => {
-                        const isActive = activeSessionId === session.id;
-                        return (
-                          <button
-                            key={session.id}
-                            onClick={() => handleSelectSession(session.id)}
-                            className={`group flex w-full items-center rounded-xl px-2 py-2 text-left transition-colors ${
-                              isActive
-                                ? "bg-black text-white"
-                                : "bg-white hover:bg-gray-100 text-gray-900"
-                            }`}
-                          >
-                            <div className="flex min-w-0 flex-1 flex-col">
-                              <span className="truncate text-sm font-medium">
-                                {session.title || "未命名对话"}
-                              </span>
-                            </div>
-                            {isActive && (
-                              <button
-                                type="button"
-                                onClick={(e) => handleDeleteSession(e, session)}
-                                className="ml-2 inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
-                                title="删除会话"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            )}
-                            {!isActive && (
-                              <button
-                                type="button"
-                                onClick={(e) => handleDeleteSession(e, session)}
-                                className="ml-2 hidden group-hover:inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-                                title="删除会话"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                }
+              )}
             </div>
             <div className="border-t border-gray-100 px-4 py-3 text-[11px] text-gray-400 flex items-center justify-between">
               <span>会话数：{sessions.length}</span>
@@ -1691,8 +1768,8 @@ export default function App() {
         )}
 
         {/* 主内容区域 */}
-        <div className="flex-1 flex flex-col min-h-0">
-          {/* 顶部栏：左侧小图标 + 右侧 Get Pro */}
+        <div className="flex-1 flex flex-col min-h-0 w-full">
+          {/* 顶部栏：左侧小图标 + 右侧设置 */}
           <header
             className={`flex items-center justify-between px-4 sm:px-8 py-2 sm:py-5 transition-all duration-200 ${
               isScrolled
@@ -1700,14 +1777,23 @@ export default function App() {
                 : "bg-transparent"
             }`}
           >
-            {/* 仅移动端显示的会话按钮 */}
-            <button
-              type="button"
-              className="w-8 h-8 rounded-2xl border border-[#e4d9ce] flex items-center justify-center text-gray-400 bg-white/80 sm:hidden"
-              onClick={() => setIsSidebarOpen(true)}
-            >
-              <LayoutGrid size={15} />
-            </button>
+            {/* 仅移动端显示的会话按钮 + 新建按钮 */}
+            <div className="flex items-center gap-2 sm:hidden">
+              <button
+                type="button"
+                className="w-8 h-8 rounded-2xl border shadow-soft-card border-[#e4d9ce] flex items-center justify-center text-gray-400 bg-white/80"
+                onClick={() => setIsSidebarOpen(true)}
+              >
+                <History size={15} color="black" />
+              </button>
+              <button
+                type="button"
+                onClick={handleNewChat}
+                className="w-8 h-8 rounded-2xl bg-black text-white flex items-center justify-center shadow-soft-card"
+              >
+                <MessageSquarePlus size={15} />
+              </button>
+            </div>
 
             <button
               type="button"
@@ -1719,7 +1805,7 @@ export default function App() {
           </header>
 
           {/* 中心聊天区域 */}
-          <main className="flex-1 flex flex-col items-center justify-between px-3 sm:px-10 pb-4 sm:pb-2 pt-0 min-h-0">
+          <main className="flex-1 flex flex-col items-center justify-between px-3 sm:px-10 pb-2 sm:pb-2 pt-0 min-h-0">
             {/* 中间：标题 + 消息列表 */}
             {/* 中间：标题 + 消息列表 */}
             <div
@@ -1734,7 +1820,6 @@ export default function App() {
                       {/* What can I help with? */}
                       我有什么能帮您的?
                     </h1>
-                  
                   </div>
                 )}
 
@@ -1745,10 +1830,11 @@ export default function App() {
                       <Loader />
                     </div>
                   )}
-                    {messages.length === 0 && !isSessionLoading && (
-<div className="my-50">
+                  {messages.length === 0 && !isSessionLoading && (
+                    <div className="my-50">
                       <BlackHole />
-                    </div>)}
+                    </div>
+                  )}
                   {messages.map((msg, index) => (
                     <MessageItem
                       key={msg.id || index}
@@ -1835,47 +1921,50 @@ export default function App() {
                     >
                       <SlidersHorizontal size={13} />
                     </button>
-                   
-                   {/* 桌面端显示的功能开关 */}
-                   <div className="hidden sm:flex items-center space-x-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsThinkingMode((p) => !p)}
-                      className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] border ${
-                        isThinkingMode
-                          ? "bg-black text-white border-black"
-                          : "border-[#e4d7c8] text-gray-500 bg-white"
-                      }`}
-                      title="思考模式"
-                    >
-                      <Brain size={13} />
-                    </button>
-                     <button
-                      type="button"
-                      onClick={() => setIsSearchMode((p) => !p)}
-                      className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] border ${
-                        isSearchMode
-                          ? "bg-black text-white border-black"
-                          : "border-[#e4d7c8] text-gray-500 bg-white"
-                      }`}
-                      title="联网搜索"
-                    >
-                      <Globe size={13} />
-                    </button>
-                   </div>
+
+                    {/* 桌面端显示的功能开关 */}
+                    <div className="hidden sm:flex items-center space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsThinkingMode((p) => !p)}
+                        className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] border ${
+                          isThinkingMode
+                            ? "bg-black text-white border-black"
+                            : "border-[#e4d7c8] text-gray-500 bg-white"
+                        }`}
+                        title="思考模式"
+                      >
+                        <Brain size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsSearchMode((p) => !p)}
+                        className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] border ${
+                          isSearchMode
+                            ? "bg-black text-white border-black"
+                            : "border-[#e4d7c8] text-gray-500 bg-white"
+                        }`}
+                        title="联网搜索"
+                      >
+                        <Globe size={13} />
+                      </button>
+                    </div>
                   </div>
 
                   {/* ... input textarea ... */}
 
                   {/* ... send button ... */}
 
-                {/* 移动端功能菜单 */}
-                {isMobileOptionsOpen && (
-                  <div ref={mobileOptionsRef} className="absolute bottom-full left-8 mb-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-20 overflow-hidden sm:hidden">
+                  {/* 移动端功能菜单 */}
+                  {isMobileOptionsOpen && (
+                    <div
+                      ref={mobileOptionsRef}
+                      className="absolute bottom-full left-8 mb-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-20 overflow-hidden sm:hidden"
+                    >
                       <div className="px-3 py-2 border-b border-gray-100 text-xs font-semibold text-gray-500 bg-gray-50">
                         模型与功能
                       </div>
-                      
+
                       {/* 模型选择 */}
                       <div className="px-2 py-1">
                         <button
@@ -1891,7 +1980,9 @@ export default function App() {
                           }`}
                         >
                           <span className="flex-1">Gemini 2.5 Flash</span>
-                          {selectedModel === "gemini-2.5-flash" && <Check size={14} />}
+                          {selectedModel === "gemini-2.5-flash" && (
+                            <Check size={14} />
+                          )}
                         </button>
                         <button
                           type="button"
@@ -1906,7 +1997,9 @@ export default function App() {
                           }`}
                         >
                           <span className="flex-1">Gemini 2.5 Pro</span>
-                          {selectedModel === "gemini-2.5-pro" && <Check size={14} />}
+                          {selectedModel === "gemini-2.5-pro" && (
+                            <Check size={14} />
+                          )}
                         </button>
                       </div>
 
@@ -1919,11 +2012,25 @@ export default function App() {
                         className="flex items-center justify-between w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                       >
                         <div className="flex items-center">
-                          <Brain size={16} className={`mr-2 ${isThinkingMode ? "text-black" : "text-gray-400"}`} />
+                          <Brain
+                            size={16}
+                            className={`mr-2 ${
+                              isThinkingMode ? "text-black" : "text-gray-400"
+                            }`}
+                          />
                           <span>思考模式</span>
                         </div>
-                        <div className={`w-8 h-4 rounded-full relative transition-colors ${isThinkingMode ? "bg-black" : "bg-gray-200"}`}>
-                          <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${isThinkingMode ? "left-4.5" : "left-0.5"}`} style={{ left: isThinkingMode ? '18px' : '2px' }} />
+                        <div
+                          className={`w-8 h-4 rounded-full relative transition-colors ${
+                            isThinkingMode ? "bg-black" : "bg-gray-200"
+                          }`}
+                        >
+                          <div
+                            className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${
+                              isThinkingMode ? "left-4.5" : "left-0.5"
+                            }`}
+                            style={{ left: isThinkingMode ? "18px" : "2px" }}
+                          />
                         </div>
                       </button>
 
@@ -1933,48 +2040,62 @@ export default function App() {
                         className="flex items-center justify-between w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                       >
                         <div className="flex items-center">
-                          <Globe size={16} className={`mr-2 ${isSearchMode ? "text-black" : "text-gray-400"}`} />
+                          <Globe
+                            size={16}
+                            className={`mr-2 ${
+                              isSearchMode ? "text-black" : "text-gray-400"
+                            }`}
+                          />
                           <span>联网搜索</span>
                         </div>
-                        <div className={`w-8 h-4 rounded-full relative transition-colors ${isSearchMode ? "bg-black" : "bg-gray-200"}`}>
-                          <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${isSearchMode ? "left-4.5" : "left-0.5"}`} style={{ left: isSearchMode ? '18px' : '2px' }} />
+                        <div
+                          className={`w-8 h-4 rounded-full relative transition-colors ${
+                            isSearchMode ? "bg-black" : "bg-gray-200"
+                          }`}
+                        >
+                          <div
+                            className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${
+                              isSearchMode ? "left-4.5" : "left-0.5"
+                            }`}
+                            style={{ left: isSearchMode ? "18px" : "2px" }}
+                          />
                         </div>
                       </button>
-                  </div>
-                )}
-
-                {/* 上传菜单 (Restored to original) */}
-                {isUploadMenuOpen && (
-                  <div className="absolute bottom-full left-0 mb-2 w-52 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-20">
-                    <div className="px-3 py-2 border-b border-gray-100 text-xs font-semibold text-gray-500">
-                      上传（开发中）
                     </div>
-                    <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                      <File size={16} className="mr-2 text-gray-500" /> 上传文档
-                    </button>
-                    <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                      <Image size={16} className="mr-2 text-gray-500" />{" "}
-                      上传图片
-                    </button>
-                    <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                      <Video size={16} className="mr-2 text-gray-500" />{" "}
-                      上传视频
-                    </button>
-                    <button
-                      className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors rounded-b-2xl"
-                    >
-                      <Mic size={16} className="mr-2 text-gray-500" /> 上传音频
-                    </button>
-                  </div>
-                )}
+                  )}
+
+                  {/* 上传菜单 (Restored to original) */}
+                  {isUploadMenuOpen && (
+                    <div className="absolute bottom-full left-0 mb-2 w-52 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-20">
+                      <div className="px-3 py-2 border-b border-gray-100 text-xs font-semibold text-gray-500">
+                        上传（开发中）
+                      </div>
+                      <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                        <File size={16} className="mr-2 text-gray-500" />{" "}
+                        上传文档
+                      </button>
+                      <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                        <Image size={16} className="mr-2 text-gray-500" />{" "}
+                        上传图片
+                      </button>
+                      <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                        <Video size={16} className="mr-2 text-gray-500" />{" "}
+                        上传视频
+                      </button>
+                      <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors rounded-b-2xl">
+                        <Mic size={16} className="mr-2 text-gray-500" />{" "}
+                        上传音频
+                      </button>
+                    </div>
+                  )}
 
                   {/* 输入框本体 */}
                   <textarea
                     ref={(el) => {
                       if (el) {
                         // Auto-resize textarea
-                        el.style.height = 'auto';
-                        el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+                        el.style.height = "auto";
+                        el.style.height = Math.min(el.scrollHeight, 200) + "px";
                       }
                     }}
                     value={currentInput}
@@ -1986,14 +2107,12 @@ export default function App() {
                       }
                     }}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
+                      if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
                         handleSendMessage(e);
                       }
                     }}
-                    placeholder={
-                      isLoading ? "正在思考中..." : "提问任何事"
-                    }
+                    placeholder={isLoading ? "正在思考中..." : "提问任何事"}
                     disabled={isLoading}
                     rows={1}
                     className="flex-1 bg-transparent border-none outline-none text-[14px] sm:text-[15px] placeholder:text-gray-400 resize-none overflow-y-auto max-h-[200px]"
@@ -2024,9 +2143,7 @@ export default function App() {
 
                     {/* 模型选择弹层 */}
                     {isModelMenuOpen && (
-                      <div 
-                        className="absolute bottom-full right-0 mb-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-50"
-                      >
+                      <div className="absolute bottom-full right-0 mb-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-50">
                         <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
                           <span className="flex items-center justify-center w-5 h-5 rounded-full ">
                             <img
@@ -2111,7 +2228,7 @@ export default function App() {
                 {isUploadMenuOpen && (
                   <div className="absolute bottom-full left-0 mb-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-20 overflow-hidden">
                     {/* 移动端专属选项 */}
-                  
+
                     <div className="px-3 py-2 border-b border-gray-100 text-xs font-semibold text-gray-500 bg-gray-50">
                       上传（开发中）
                     </div>
@@ -2126,9 +2243,7 @@ export default function App() {
                       <Video size={16} className="mr-2 text-gray-500" />{" "}
                       上传视频
                     </button>
-                    <button
-                      className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                    >
+                    <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                       <Mic size={16} className="mr-2 text-gray-500" /> 上传音频
                     </button>
                   </div>
@@ -2183,10 +2298,11 @@ export default function App() {
             try {
               localStorage.setItem("userApiKey", newGeminiKey);
             } catch {}
-            
+
             // Check if Supabase config has changed
-            const isSbConfigChanged = JSON.stringify(newSbConfig) !== JSON.stringify(localSbConfig);
-            
+            const isSbConfigChanged =
+              JSON.stringify(newSbConfig) !== JSON.stringify(localSbConfig);
+
             setLocalSbConfig(newSbConfig);
             try {
               localStorage.setItem(

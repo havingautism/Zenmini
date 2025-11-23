@@ -72,7 +72,7 @@ export default function MessageItem({
         } mt-1 mb-1`}
       >
         <div
-          className={`flex flex-col max-w-[100%] sm:max-w-[80%] shadow-[0_4px_20px_rgba(0,0,0,0.05)] sm:shadow-soft-card ${
+          className={`flex flex-col max-w-[100%] sm:max-w-[80%] shadow-[0_4px_20px_rgba(0,0,0,0.05)]  ${
             isUser
               ? "bg-bubble-user text-white rounded-3xl rounded-br-sm"
               : botBubbleClass
@@ -113,18 +113,17 @@ export default function MessageItem({
             {isLoadingBubble ? (
               isThinkingLoading ? (
                 <div className="flex flex-col space-y-1">
-                  
                   <span className="text-sm text-gray-700 mt-0.5">
                     {THINKING_PHASES[thinkingPhaseIndex]}
                   </span>
-                  <div >
-                   <Loader />
+                  <div>
+                    <Loader />
                   </div>
                 </div>
               ) : (
                 <div className="flex items-center space-x-2 text-xs text-gray-500">
-                   <div >
-                   <Loader />
+                  <div>
+                    <Loader />
                   </div>
                 </div>
               )
@@ -133,7 +132,9 @@ export default function MessageItem({
             ) : (
               <MarkdownRenderer
                 content={msg.content}
-                groundingMetadata={msg.groundingMetadata || msg.grounding_metadata}
+                groundingMetadata={
+                  msg.groundingMetadata || msg.grounding_metadata
+                }
               />
             )}
 
@@ -175,25 +176,29 @@ export default function MessageItem({
                 </button>
                 {areSourcesVisible && (
                   <div className="mt-3">
-                 
                     {msg.grounding_metadata?.webSearchQueries && (
                       <div className="mb-3 flex flex-wrap items-center gap-2">
-                           <FaGoogle size={14} className="mr-1" />
-                        {msg.grounding_metadata.webSearchQueries.map((query, i) => (
-                          <div key={i} className="text-[10px] bg-gray-100 text-gray-500 px-2 py-1 rounded-full flex items-center">
-                            <Search size={10} className="mr-1" />
-                            {query}
-                          </div>
-                        ))}
+                        <FaGoogle size={14} className="mr-1" />
+                        {msg.grounding_metadata.webSearchQueries.map(
+                          (query, i) => (
+                            <div
+                              key={i}
+                              className="text-[10px] bg-gray-100 text-gray-500 px-2 py-1 rounded-full flex items-center"
+                            >
+                              <Search size={10} className="mr-1" />
+                              {query}
+                            </div>
+                          )
+                        )}
                       </div>
                     )}
-                  <ul className="space-y-2">                                                                                                                          
-    {msg.sources.map((source, index) => (                                                                                                             
-      <li                                                                                                                                             
-        key={index}                                                                                                                                   
-        id={`source-${index}`}                                                                                                                        
-        className="text-xs bg-[#fcfcfc] border border-gray-100 rounded-xl p-2 hover:bg-gray-50 transition-colors scroll-mt-20"                        
-      >                                                                                                                                               
+                    <ul className="space-y-2">
+                      {msg.sources.map((source, index) => (
+                        <li
+                          key={index}
+                          id={`source-${index}`}
+                          className="text-xs bg-[#fcfcfc] border border-gray-100 rounded-xl p-2 hover:bg-gray-50 transition-colors scroll-mt-20"
+                        >
                           <a
                             href={source.uri}
                             target="_blank"
@@ -201,29 +206,28 @@ export default function MessageItem({
                             className="flex items-center gap-2.5 group"
                             title={source.title}
                           >
-          {/* 统一的互联网图标 */}                                                                                                                    
-          <div className="flex-shrink-0 mt-0.5 w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">                      
-            <Globe size={14} />                                                                                                                       
-          </div>                                                                                                                                      
-                                                                                                                                                      
-          {/* 只显示标题，不显示 URL / 域名 */}                                                                                                       
-          <div className="flex-1 min-w-0">                                                                                                            
-            <div className="font-medium text-gray-800 truncate group-hover:text-blue-600 transition-colors">                                          
-              {source.title || "未命名来源"}                                                                                                          
-            </div>                                                                                                                                    
-          </div>                                                                                                                                      
-        </a>                                                                                                                                          
-      </li>                                                                                                                                           
-    ))}                                                                                                                                               
-  </ul>    
+                            {/* 统一的互联网图标 */}
+                            <div className="flex-shrink-0 mt-0.5 w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                              <Globe size={14} />
+                            </div>
+
+                            {/* 只显示标题，不显示 URL / 域名 */}
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-gray-800 truncate group-hover:text-blue-600 transition-colors">
+                                {source.title || "未命名来源"}
+                              </div>
+                            </div>
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          {!isUser && !isLoadingBubble &&
-              !isThinkingLoading && (
+          {!isUser && !isLoadingBubble && !isThinkingLoading && (
             <div className="mt-auto pt-2 px-4 pb-2 border-t border-gray-100 flex items-center justify-between space-x-1 text-[12px] sm:text-[13px]">
               <div className="flex items-center space-x-3">
                 {msg.generatedWithThinking && (
