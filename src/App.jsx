@@ -1872,7 +1872,7 @@ export default function App() {
                 )}
 
                 {/* 消息列表 */}
-                <div className="flex-1 w-full overflow-y-auto flex flex-col space-y-2 pb-4">
+                <div className="flex-1 w-full overflow-y-auto flex flex-col space-y-2 pt-2 pb-4">
                   {isSessionLoading && (
                     <div className="flex justify-center pt-10">
                       <Loader />
@@ -1927,9 +1927,9 @@ export default function App() {
             )} */}
 
             {/* 建议问句 + 输入区域 */}
-            <div className="w-full max-w-3xl px-3 shadow-soft-card sm:shadow-none">
+            <div className="w-full max-w-3xl px-3 ">
               {suggestedReplies.length > 0 && (
-                <div className="relative mb-2">
+                <div className="relative mb-2 ">
                   <div
                     ref={suggestedRepliesRef}
                     className="flex items-center gap-2 overflow-x-auto flex-nowrap rounded-[26px] shadow-soft-card px-3 py-2 bg-white [&::-webkit-scrollbar]:hidden"
@@ -1943,7 +1943,7 @@ export default function App() {
                       <button
                         key={index}
                         onClick={() => handleSuggestedReplyClick(reply)}
-                        className="px-3 py-2 rounded-3xl bg-bubble-hint text-[13px] text-gray-800 hover:bg-[#f1e5d6] transition-colors whitespace-nowrap"
+                        className="px-3 py-2 rounded-3xl bg-bubble-hint text-[13px] shadow-soft-card text-gray-800 hover:bg-[#f1e5d6] transition-colors whitespace-nowrap"
                       >
                         <SuggestedReplyMarkdown content={reply} />
                       </button>

@@ -37,12 +37,12 @@ export default {
         "4xl": "2.25rem",
       },
       boxShadow: {
-        // 'soft-card': '0 18px 60px rgba(15,23,42,0.08)',
-        "soft-card": `
-          0 4px 6px rgba(0,0,0,0.1),
-          0 10px 20px rgba(0,0,0,0.05),
-          0 15px 35px rgba(0,0,0,0.03)
-        `,
+        "soft-card": "0 18px 60px rgba(15,23,42,0.08)",
+        // "soft-card": `
+        //   0 4px 6px rgba(0,0,0,0.1),
+        //   0 10px 20px rgba(0,0,0,0.05),
+        //   0 15px 35px rgba(0,0,0,0.03)
+        // `,
       },
     },
   },
