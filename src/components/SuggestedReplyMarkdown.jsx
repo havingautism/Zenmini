@@ -6,21 +6,19 @@ import remarkGfm from "remark-gfm";
 // 主要支持：粗体 / 斜体 / 行内代码 / 链接，避免段落外边距和大段排版
 export default function SuggestedReplyMarkdown({ content }) {
   return (
-    <div className="text-xs text-indigo-800 leading-snug whitespace-nowrap break-keep">
+    <div className="text-xs text-black-800 leading-snug whitespace-nowrap break-keep">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
           p: ({ children }) => <span>{children}</span>,
           strong: ({ children }) => (
-            <strong className="font-semibold text-indigo-900">
-              {children}
-            </strong>
+            <strong className="font-semibold text-black-900">{children}</strong>
           ),
           em: ({ children }) => (
-            <em className="italic text-indigo-800">{children}</em>
+            <em className="italic text-black-800">{children}</em>
           ),
           code: ({ children }) => (
-            <code className="px-1 py-0.5 rounded bg-indigo-100/80 text-[11px] font-mono text-indigo-900">
+            <code className="px-1 py-0.5 rounded bg-black-100/80 text-[11px] font-mono text-black-900">
               {children}
             </code>
           ),
@@ -29,7 +27,7 @@ export default function SuggestedReplyMarkdown({ content }) {
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="underline underline-offset-2 decoration-indigo-400 hover:text-indigo-700"
+              className="underline underline-offset-2 decoration-black-400 hover:text-black-700"
             >
               {children}
             </a>

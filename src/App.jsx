@@ -1943,7 +1943,7 @@ export default function App() {
                       <button
                         key={index}
                         onClick={() => handleSuggestedReplyClick(reply)}
-                        className="px-3 py-2 rounded-3xl bg-bubble-hint text-[13px] shadow-soft-card text-gray-800 hover:bg-[#f1e5d6] transition-colors whitespace-nowrap"
+                        className="px-3 py-2 rounded-3xl bg-[#f3f3f3e3] text-[13px] shadow-soft-card text-gray-800 hover:bg-[#e8e8e8eb] transition-colors whitespace-nowrap"
                       >
                         <SuggestedReplyMarkdown content={reply} />
                       </button>
