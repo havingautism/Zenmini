@@ -62,17 +62,17 @@ export default function MessageItem({
   }, [isThinkingLoading]);
 
   const botBubbleClass =
-    "bg-bubble-bot text-gray-900 rounded-3xl rounded-bl-sm border border-[#ece4da]";
+    "bg-bubble-bot text-gray-900 rounded-3xl rounded-bl-sm ";
 
   return (
     <div className="flex justify-center">
       <div
-        className={`flex w-full max-w-3xl px-4 ${
+        className={`flex w-full max-w-3xl px-4 sm:px-8 ${
           isUser ? "justify-end" : "justify-start"
         } mt-1 mb-1`}
       >
         <div
-          className={`flex flex-col max-w-[100%] sm:max-w-[80%] shadow-[0_4px_20px_rgba(0,0,0,0.05)]  ${
+          className={`flex flex-col max-w-[100%] sm:max-w-[80%] shadow-soft-card  ${
             isUser
               ? "bg-bubble-user text-white rounded-3xl rounded-br-sm"
               : botBubbleClass

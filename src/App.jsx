@@ -36,6 +36,8 @@ import {
   MessageSquare,
   MoreHorizontal,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Settings,
   Send,
 } from "lucide-react";
@@ -139,7 +141,11 @@ export default function App() {
   const mobileOptionsRef = useRef(null);
   const modelMenuRef = useRef(null);
   const scrollRef = useRef(null);
+  const suggestedRepliesRef = useRef(null);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [showSuggestionsLeftHint, setShowSuggestionsLeftHint] = useState(false);
+  const [showSuggestionsRightHint, setShowSuggestionsRightHint] =
+    useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -202,6 +208,33 @@ export default function App() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, suggestedReplies, isLoading]);
+
+  useEffect(() => {
+    const container = suggestedRepliesRef.current;
+    if (!container || suggestedReplies.length === 0) {
+      setShowSuggestionsLeftHint(false);
+      setShowSuggestionsRightHint(false);
+      return;
+    }
+
+    const updateHints = () => {
+      if (!suggestedRepliesRef.current) return;
+      const { scrollLeft, scrollWidth, clientWidth } =
+        suggestedRepliesRef.current;
+      setShowSuggestionsLeftHint(scrollLeft > 4);
+      setShowSuggestionsRightHint(scrollLeft < scrollWidth - clientWidth - 4);
+    };
+
+    updateHints();
+
+    container.addEventListener("scroll", updateHints, { passive: true });
+    window.addEventListener("resize", updateHints);
+
+    return () => {
+      container.removeEventListener("scroll", updateHints);
+      window.removeEventListener("resize", updateHints);
+    };
+  }, [suggestedReplies.length]);
 
   useEffect(() => {
     if (!isUploadMenuOpen && !isMobileOptionsOpen) return;
@@ -1518,7 +1551,7 @@ export default function App() {
     <div className="h-screen w-full bg-gray-100 flex items-center justify-center p-0 sm:p-2 text-gray-900">
       <div className="relative flex w-full  h-full  bg-white rounded-none sm:rounded-4xl shadow-soft-card border border-gray-200 overflow-hidden">
         {/* 左侧竖向图标栏（桌面端可见） */}
-        <div className="hidden sm:flex flex-col justify-between py-5 px-8 w-12">
+        <div className="hidden sm:flex flex-col justify-between py-5 px-8 w-12 shadow-soft-card">
           <div className="flex flex-col items-center space-y-5">
             <button
               onClick={handleNewChat}
@@ -1774,7 +1807,7 @@ export default function App() {
           <header
             className={`flex items-center justify-between px-4 sm:px-8 py-2 sm:py-5 transition-all duration-200 ${
               isScrolled
-                ? "bg-white/80 backdrop-blur-md shadow-sm z-10"
+                ? "bg-white/80 backdrop-blur-md shadow-soft-card sm:shadow-sm z-10"
                 : "bg-transparent"
             }`}
           >
@@ -1820,7 +1853,7 @@ export default function App() {
           </header>
 
           {/* 中心聊天区域 */}
-          <main className="flex-1 flex flex-col items-center justify-between px-3 sm:px-10 pb-2 sm:pb-2 pt-0 min-h-0">
+          <main className="flex-1 flex flex-col items-center justify-between px-0 sm:px-10 pb-2 sm:pb-2 pt-0 min-h-0">
             {/* 中间：标题 + 消息列表 */}
             {/* 中间：标题 + 消息列表 */}
             <div
@@ -1894,25 +1927,47 @@ export default function App() {
             )} */}
 
             {/* 建议问句 + 输入区域 */}
-            <div className="w-full max-w-3xl">
+            <div className="w-full max-w-3xl px-3 shadow-soft-card sm:shadow-none">
               {suggestedReplies.length > 0 && (
-                <div className="mb-2 p-2 flex flex-wrap gap-2 rounded-[26px] border border-gray-200 shadow-soft-card">
-                  {suggestedReplies.map((reply, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleSuggestedReplyClick(reply)}
-                      className="px-3 py-2 rounded-3xl bg-bubble-hint text-[13px] text-gray-800 hover:bg-[#f1e5d6] transition-colors max-w-full text-
-  left"
-                    >
-                      <SuggestedReplyMarkdown content={reply} />
-                    </button>
-                  ))}
+                <div className="relative mb-2">
+                  <div
+                    ref={suggestedRepliesRef}
+                    className="flex items-center gap-2 overflow-x-auto flex-nowrap rounded-[26px] shadow-soft-card px-3 py-2 bg-white [&::-webkit-scrollbar]:hidden"
+                    style={{
+                      scrollbarWidth: "none",
+                      msOverflowStyle: "none",
+                      WebkitOverflowScrolling: "touch",
+                    }}
+                  >
+                    {suggestedReplies.map((reply, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleSuggestedReplyClick(reply)}
+                        className="px-3 py-2 rounded-3xl bg-bubble-hint text-[13px] text-gray-800 hover:bg-[#f1e5d6] transition-colors whitespace-nowrap"
+                      >
+                        <SuggestedReplyMarkdown content={reply} />
+                      </button>
+                    ))}
+                  </div>
+                  {showSuggestionsLeftHint && (
+                    <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-white via-white/80 to-transparent rounded-[26px] flex items-center pl-2 text-gray-400">
+                      <ChevronLeft size={16} />
+                    </div>
+                  )}
+                  {showSuggestionsRightHint && (
+                    <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white via-white/80 to-transparent rounded-[26px] flex items-center justify-end pr-2 text-gray-400">
+                      <ChevronRight size={16} />
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* 输入卡片 */}
-              <form onSubmit={handleSendMessage} className="relative w-full z-40">
-                <div className="flex items-center rounded-[26px] bg-white shadow-soft-card border border-[#efe4d7] px-4 py-2 sm:py-3">
+              <form
+                onSubmit={handleSendMessage}
+                className="relative w-full z-40"
+              >
+                <div className="flex items-center rounded-[26px] bg-white shadow-soft-card  px-4 py-2 sm:py-3">
                   {/* 左侧工具按钮：上传 / Mobile Options / Desktop Toggles */}
                   <div
                     className="flex items-center space-x-2 mr-3 text-gray-400"
@@ -2007,7 +2062,9 @@ export default function App() {
                               <Brain
                                 size={16}
                                 className={`mr-2 ${
-                                  isThinkingMode ? "text-black" : "text-gray-400"
+                                  isThinkingMode
+                                    ? "text-black"
+                                    : "text-gray-400"
                                 }`}
                               />
                               <span>思考模式</span>
@@ -2021,7 +2078,9 @@ export default function App() {
                                 className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${
                                   isThinkingMode ? "left-4.5" : "left-0.5"
                                 }`}
-                                style={{ left: isThinkingMode ? "18px" : "2px" }}
+                                style={{
+                                  left: isThinkingMode ? "18px" : "2px",
+                                }}
                               />
                             </div>
                           </button>
