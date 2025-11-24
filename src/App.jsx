@@ -138,7 +138,6 @@ export default function App() {
   const uploadMenuRef = useRef(null);
   const modelMenuRef = useRef(null);
   const scrollRef = useRef(null);
-  const mobileOptionsRef = useRef(null);
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
@@ -204,36 +203,31 @@ export default function App() {
   }, [messages, suggestedReplies, isLoading]);
 
   useEffect(() => {
-    if (!isUploadMenuOpen) return;
+    if (!isUploadMenuOpen && !isMobileOptionsOpen) return;
+
     const handleClickOutside = (event) => {
       if (
+        isUploadMenuOpen &&
         uploadMenuRef.current &&
         !uploadMenuRef.current.contains(event.target)
       ) {
         setIsUploadMenuOpen(false);
       }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isUploadMenuOpen]);
 
-  useEffect(() => {
-    if (!isMobileOptionsOpen) return;
-    const handleClickOutside = (event) => {
       if (
-        mobileOptionsRef.current &&
-        !mobileOptionsRef.current.contains(event.target)
+        isMobileOptionsOpen &&
+        uploadMenuRef.current &&
+        !uploadMenuRef.current.contains(event.target)
       ) {
         setIsMobileOptionsOpen(false);
       }
     };
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isMobileOptionsOpen]);
+  }, [isUploadMenuOpen, isMobileOptionsOpen]);
 
   useEffect(() => {
     if (!isModelMenuOpen) return;
@@ -1905,7 +1899,13 @@ export default function App() {
                   >
                     <button
                       type="button"
-                      onClick={() => setIsUploadMenuOpen((p) => !p)}
+                      onClick={() =>
+                        setIsUploadMenuOpen((prev) => {
+                          const next = !prev;
+                          if (next) setIsMobileOptionsOpen(false);
+                          return next;
+                        })
+                      }
                       className="w-6 h-6 rounded-full border border-[#e4d7c8] flex items-center justify-center hover:bg-bubble-hint/60 transition-colors"
                       title="上传文件"
                     >
@@ -1915,7 +1915,13 @@ export default function App() {
                     {/* 移动端专属：功能菜单按钮 */}
                     <button
                       type="button"
-                      onClick={() => setIsMobileOptionsOpen((p) => !p)}
+                      onClick={() =>
+                        setIsMobileOptionsOpen((prev) => {
+                          const next = !prev;
+                          if (next) setIsUploadMenuOpen(false);
+                          return next;
+                        })
+                      }
                       className="sm:hidden w-6 h-6 rounded-full border border-[#e4d7c8] flex items-center justify-center hover:bg-bubble-hint/60 transition-colors"
                       title="模型与功能"
                     >
@@ -1957,10 +1963,7 @@ export default function App() {
 
                   {/* 移动端功能菜单 */}
                   {isMobileOptionsOpen && (
-                    <div
-                      ref={mobileOptionsRef}
-                      className="absolute bottom-full left-8 mb-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-20 overflow-hidden sm:hidden"
-                    >
+                    <div className="absolute bottom-full left-8 mb-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-20 overflow-hidden sm:hidden">
                       <div className="px-3 py-2 border-b border-gray-100 text-xs font-semibold text-gray-500 bg-gray-50">
                         模型与功能
                       </div>
