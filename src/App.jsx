@@ -1928,6 +1928,7 @@ export default function App() {
 
             {/* 建议问句 + 输入区域 */}
             <div className="w-full max-w-3xl px-3 ">
+              <div className="h-[3px] mx-4 bg-[#d1d1d10d] shadow-soft-card" />
               {suggestedReplies.length > 0 && (
                 <div className="relative mb-2 ">
                   <div
@@ -1943,7 +1944,7 @@ export default function App() {
                       <button
                         key={index}
                         onClick={() => handleSuggestedReplyClick(reply)}
-                        className="px-3 py-2 rounded-3xl bg-[#f3f3f3e3] text-[13px] shadow-soft-card text-gray-800 hover:bg-[#e8e8e8eb] transition-colors whitespace-nowrap"
+                        className="px-3 py-2 rounded-3xl bg-[#e9e9e9c2] text-[13px] shadow-soft-card text-gray-800 hover:bg-[#e9e9e9] transition-colors whitespace-nowrap"
                       >
                         <SuggestedReplyMarkdown content={reply} />
                       </button>
