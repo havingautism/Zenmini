@@ -136,6 +136,7 @@ export default function App() {
 
   const messagesEndRef = useRef(null);
   const uploadMenuRef = useRef(null);
+  const mobileOptionsRef = useRef(null);
   const modelMenuRef = useRef(null);
   const scrollRef = useRef(null);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -216,8 +217,8 @@ export default function App() {
 
       if (
         isMobileOptionsOpen &&
-        uploadMenuRef.current &&
-        !uploadMenuRef.current.contains(event.target)
+        mobileOptionsRef.current &&
+        !mobileOptionsRef.current.contains(event.target)
       ) {
         setIsMobileOptionsOpen(false);
       }
@@ -1511,6 +1512,8 @@ export default function App() {
     };
   }, [userId, client, userApiKey, isLoading, activeSessionId, isAuthReady]);
 
+  const showMobileOverlay = isUploadMenuOpen || isMobileOptionsOpen;
+
   return (
     <div className="h-screen w-full bg-gray-100 flex items-center justify-center p-0 sm:p-2 text-gray-900">
       <div className="relative flex w-full  h-full  bg-white rounded-none sm:rounded-4xl shadow-soft-card border border-gray-200 overflow-hidden">
@@ -1536,6 +1539,10 @@ export default function App() {
             </button>
           </div>
         </div>
+
+        {showMobileOverlay && (
+          <div className="sm:hidden pointer-events-none absolute inset-0 z-30 bg-white/60 backdrop-blur-md transition-opacity duration-200" />
+        )}
 
         {/* 会话侧边栏（移动端，仅会话历史） */}
         {isSidebarOpen && (
@@ -1890,7 +1897,7 @@ export default function App() {
               )}
 
               {/* 输入卡片 */}
-              <form onSubmit={handleSendMessage} className="relative w-full">
+              <form onSubmit={handleSendMessage} className="relative w-full z-40">
                 <div className="flex items-center rounded-[26px] bg-white shadow-soft-card border border-[#efe4d7] px-4 py-2 sm:py-3">
                   {/* 左侧工具按钮：上传 / Mobile Options / Desktop Toggles */}
                   <div
@@ -1913,20 +1920,128 @@ export default function App() {
                     </button>
 
                     {/* 移动端专属：功能菜单按钮 */}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setIsMobileOptionsOpen((prev) => {
-                          const next = !prev;
-                          if (next) setIsUploadMenuOpen(false);
-                          return next;
-                        })
-                      }
-                      className="sm:hidden w-6 h-6 rounded-full border border-[#e4d7c8] flex items-center justify-center hover:bg-bubble-hint/60 transition-colors"
-                      title="模型与功能"
-                    >
-                      <SlidersHorizontal size={13} />
-                    </button>
+                    <div className="sm:hidden" ref={mobileOptionsRef}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setIsMobileOptionsOpen((prev) => {
+                            const next = !prev;
+                            if (next) setIsUploadMenuOpen(false);
+                            return next;
+                          })
+                        }
+                        className="w-6 h-6 rounded-full border border-[#e4d7c8] flex items-center justify-center hover:bg-bubble-hint/60 transition-colors"
+                        title="模型与功能"
+                      >
+                        <SlidersHorizontal size={13} />
+                      </button>
+
+                      {/* 移动端功能菜单 */}
+                      {isMobileOptionsOpen && (
+                        <div className="absolute bottom-full left-8 mb-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-50 overflow-hidden">
+                          <div className="px-3 py-2 border-b border-gray-100 text-xs font-semibold text-gray-500 bg-gray-50">
+                            模型与功能
+                          </div>
+
+                          {/* 模型选择 */}
+                          <div className="px-2 py-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedModel("gemini-2.5-flash");
+                                setIsMobileOptionsOpen(false);
+                              }}
+                              className={`flex items-center w-full px-3 py-2 text-left text-sm rounded-lg transition-colors ${
+                                selectedModel === "gemini-2.5-flash"
+                                  ? "bg-bubble-hint text-gray-900 font-medium"
+                                  : "text-gray-700 hover:bg-gray-50"
+                              }`}
+                            >
+                              <span className="flex-1">Gemini 2.5 Flash</span>
+                              {selectedModel === "gemini-2.5-flash" && (
+                                <Check size={14} />
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedModel("gemini-2.5-pro");
+                                setIsMobileOptionsOpen(false);
+                              }}
+                              className={`flex items-center w-full px-3 py-2 text-left text-sm rounded-lg transition-colors ${
+                                selectedModel === "gemini-2.5-pro"
+                                  ? "bg-bubble-hint text-gray-900 font-medium"
+                                  : "text-gray-700 hover:bg-gray-50"
+                              }`}
+                            >
+                              <span className="flex-1">Gemini 2.5 Pro</span>
+                              {selectedModel === "gemini-2.5-pro" && (
+                                <Check size={14} />
+                              )}
+                            </button>
+                          </div>
+
+                          <div className="h-px bg-gray-100 my-1 mx-2" />
+
+                          {/* 功能开关 */}
+                          <button
+                            type="button"
+                            onClick={() => setIsThinkingMode(!isThinkingMode)}
+                            className="flex items-center justify-between w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            <div className="flex items-center">
+                              <Brain
+                                size={16}
+                                className={`mr-2 ${
+                                  isThinkingMode ? "text-black" : "text-gray-400"
+                                }`}
+                              />
+                              <span>思考模式</span>
+                            </div>
+                            <div
+                              className={`w-8 h-4 rounded-full relative transition-colors ${
+                                isThinkingMode ? "bg-black" : "bg-gray-200"
+                              }`}
+                            >
+                              <div
+                                className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${
+                                  isThinkingMode ? "left-4.5" : "left-0.5"
+                                }`}
+                                style={{ left: isThinkingMode ? "18px" : "2px" }}
+                              />
+                            </div>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setIsSearchMode(!isSearchMode)}
+                            className="flex items-center justify-between w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            <div className="flex items-center">
+                              <Globe
+                                size={16}
+                                className={`mr-2 ${
+                                  isSearchMode ? "text-black" : "text-gray-400"
+                                }`}
+                              />
+                              <span>联网搜索</span>
+                            </div>
+                            <div
+                              className={`w-8 h-4 rounded-full relative transition-colors ${
+                                isSearchMode ? "bg-black" : "bg-gray-200"
+                              }`}
+                            >
+                              <div
+                                className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${
+                                  isSearchMode ? "left-4.5" : "left-0.5"
+                                }`}
+                                style={{ left: isSearchMode ? "18px" : "2px" }}
+                              />
+                            </div>
+                          </button>
+                        </div>
+                      )}
+                    </div>
 
                     {/* 桌面端显示的功能开关 */}
                     <div className="hidden sm:flex items-center space-x-2">
@@ -1961,115 +2076,9 @@ export default function App() {
 
                   {/* ... send button ... */}
 
-                  {/* 移动端功能菜单 */}
-                  {isMobileOptionsOpen && (
-                    <div className="absolute bottom-full left-8 mb-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-20 overflow-hidden sm:hidden">
-                      <div className="px-3 py-2 border-b border-gray-100 text-xs font-semibold text-gray-500 bg-gray-50">
-                        模型与功能
-                      </div>
-
-                      {/* 模型选择 */}
-                      <div className="px-2 py-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedModel("gemini-2.5-flash");
-                            setIsMobileOptionsOpen(false);
-                          }}
-                          className={`flex items-center w-full px-3 py-2 text-left text-sm rounded-lg transition-colors ${
-                            selectedModel === "gemini-2.5-flash"
-                              ? "bg-bubble-hint text-gray-900 font-medium"
-                              : "text-gray-700 hover:bg-gray-50"
-                          }`}
-                        >
-                          <span className="flex-1">Gemini 2.5 Flash</span>
-                          {selectedModel === "gemini-2.5-flash" && (
-                            <Check size={14} />
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedModel("gemini-2.5-pro");
-                            setIsMobileOptionsOpen(false);
-                          }}
-                          className={`flex items-center w-full px-3 py-2 text-left text-sm rounded-lg transition-colors ${
-                            selectedModel === "gemini-2.5-pro"
-                              ? "bg-bubble-hint text-gray-900 font-medium"
-                              : "text-gray-700 hover:bg-gray-50"
-                          }`}
-                        >
-                          <span className="flex-1">Gemini 2.5 Pro</span>
-                          {selectedModel === "gemini-2.5-pro" && (
-                            <Check size={14} />
-                          )}
-                        </button>
-                      </div>
-
-                      <div className="h-px bg-gray-100 my-1 mx-2" />
-
-                      {/* 功能开关 */}
-                      <button
-                        type="button"
-                        onClick={() => setIsThinkingMode(!isThinkingMode)}
-                        className="flex items-center justify-between w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
-                        <div className="flex items-center">
-                          <Brain
-                            size={16}
-                            className={`mr-2 ${
-                              isThinkingMode ? "text-black" : "text-gray-400"
-                            }`}
-                          />
-                          <span>思考模式</span>
-                        </div>
-                        <div
-                          className={`w-8 h-4 rounded-full relative transition-colors ${
-                            isThinkingMode ? "bg-black" : "bg-gray-200"
-                          }`}
-                        >
-                          <div
-                            className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${
-                              isThinkingMode ? "left-4.5" : "left-0.5"
-                            }`}
-                            style={{ left: isThinkingMode ? "18px" : "2px" }}
-                          />
-                        </div>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setIsSearchMode(!isSearchMode)}
-                        className="flex items-center justify-between w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
-                        <div className="flex items-center">
-                          <Globe
-                            size={16}
-                            className={`mr-2 ${
-                              isSearchMode ? "text-black" : "text-gray-400"
-                            }`}
-                          />
-                          <span>联网搜索</span>
-                        </div>
-                        <div
-                          className={`w-8 h-4 rounded-full relative transition-colors ${
-                            isSearchMode ? "bg-black" : "bg-gray-200"
-                          }`}
-                        >
-                          <div
-                            className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${
-                              isSearchMode ? "left-4.5" : "left-0.5"
-                            }`}
-                            style={{ left: isSearchMode ? "18px" : "2px" }}
-                          />
-                        </div>
-                      </button>
-                    </div>
-                  )}
-
                   {/* 上传菜单 (Restored to original) */}
                   {isUploadMenuOpen && (
-                    <div className="absolute bottom-full left-0 mb-2 w-52 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-20">
+                    <div className="absolute bottom-full left-0 mb-2 w-52 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-50">
                       <div className="px-3 py-2 border-b border-gray-100 text-xs font-semibold text-gray-500">
                         上传（开发中）
                       </div>
@@ -2229,7 +2238,7 @@ export default function App() {
 
                 {/* 上传菜单 */}
                 {isUploadMenuOpen && (
-                  <div className="absolute bottom-full left-0 mb-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-20 overflow-hidden">
+                  <div className="absolute bottom-full left-0 mb-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-50 overflow-hidden">
                     {/* 移动端专属选项 */}
 
                     <div className="px-3 py-2 border-b border-gray-100 text-xs font-semibold text-gray-500 bg-gray-50">
