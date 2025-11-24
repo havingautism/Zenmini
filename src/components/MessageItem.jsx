@@ -254,7 +254,7 @@ export default function MessageItem({
                 ) : (
                   <button
                     onClick={() => onCopy(msg.content, msg.id)}
-                    className="p-1.5 rounded-full bg-[#f3ebe2] hover:bg-[#ece1d6] text-gray-800 transition-colors"
+                    className="p-1.5 rounded-full bg-[#e9e9e9c2] hover:bg-[#e9e9e9] text-gray-800 transition-colors"
                     title="复制"
                   >
                     <Copy size={16} />
@@ -264,7 +264,7 @@ export default function MessageItem({
                 {isLastModelMessage && (
                   <button
                     onClick={onRegenerate}
-                    className="p-1.5 rounded-full bg-[#f3ebe2] hover:bg-[#ece1d6] text-gray-800 transition-colors"
+                    className="p-1.5 rounded-full bg-[#e9e9e9c2] hover:bg-[#e9e9e9] text-gray-800 transition-colors"
                     title="重新生成"
                   >
                     <RefreshCw size={16} />
@@ -282,7 +282,7 @@ export default function MessageItem({
                     msg.role === "model") ? (
                   <button
                     onClick={onStopAudio}
-                    className="p-1.5 rounded-full bg-[#f3ebe2] hover:bg-[#ece1d6] text-gray-800 transition-colors"
+                    className="p-1.5 rounded-full bg-[#e9e9e9c2] hover:bg-[#e9e9e9] text-gray-800 transition-colors"
                     title="停止播放"
                   >
                     <StopCircle size={16} />
@@ -290,7 +290,7 @@ export default function MessageItem({
                 ) : (
                   <button
                     onClick={() => onPlayAudio(msg)}
-                    className="p-1.5 rounded-full bg-[#f3ebe2] hover:bg-[#ece1d6] text-gray-800 transition-colors"
+                    className="p-1.5 rounded-full bg-[#e9e9e9c2] hover:bg-[#e9e9e9] text-gray-800 transition-colors"
                     title="播放语音"
                   >
                     <Volume2 size={16} />
@@ -305,7 +305,7 @@ export default function MessageItem({
                 ) : (
                   <button
                     onClick={() => onTranslate(msg)}
-                    className="p-1.5 rounded-full bg-[#f3ebe2] hover:bg-[#ece1d6] text-gray-800 transition-colors"
+                    className="p-1.5 rounded-full bg-[#e9e9e9c2] hover:bg-[#e9e9e9] text-gray-800 transition-colors"
                     title={translatedText ? "隐藏翻译" : "翻译"}
                   >
                     <Languages size={16} />

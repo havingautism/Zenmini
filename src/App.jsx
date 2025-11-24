@@ -1853,7 +1853,7 @@ export default function App() {
           </header>
 
           {/* 中心聊天区域 */}
-          <main className="flex-1 flex flex-col items-center justify-between px-0 sm:px-10 pb-2 sm:pb-2 pt-0 min-h-0">
+          <main className="flex-1 flex flex-col items-center justify-between px-0 sm:px-10 pb-0 pt-0 min-h-0">
             {/* 中间：标题 + 消息列表 */}
             {/* 中间：标题 + 消息列表 */}
             <div
@@ -1872,7 +1872,7 @@ export default function App() {
                 )}
 
                 {/* 消息列表 */}
-                <div className="flex-1 w-full overflow-y-auto flex flex-col space-y-2 pb-4">
+                <div className="flex-1 w-full overflow-y-auto flex flex-col space-y-2 pt-2 pb-4">
                   {isSessionLoading && (
                     <div className="flex justify-center pt-10">
                       <Loader />
@@ -1927,9 +1927,10 @@ export default function App() {
             )} */}
 
             {/* 建议问句 + 输入区域 */}
-            <div className="w-full max-w-3xl px-3 shadow-soft-card sm:shadow-none">
+            <div className="w-full max-w-3xl px-3 ">
+              <div className="h-[3px] mx-4 bg-[#d1d1d10d] shadow-soft-card" />
               {suggestedReplies.length > 0 && (
-                <div className="relative mb-2">
+                <div className="relative mb-2 ">
                   <div
                     ref={suggestedRepliesRef}
                     className="flex items-center gap-2 overflow-x-auto flex-nowrap rounded-[26px] shadow-soft-card px-3 py-2 bg-white [&::-webkit-scrollbar]:hidden"
@@ -1943,7 +1944,7 @@ export default function App() {
                       <button
                         key={index}
                         onClick={() => handleSuggestedReplyClick(reply)}
-                        className="px-3 py-2 rounded-3xl bg-bubble-hint text-[13px] text-gray-800 hover:bg-[#f1e5d6] transition-colors whitespace-nowrap"
+                        className="px-3 py-2 rounded-3xl bg-[#e9e9e9c2] text-[13px] shadow-soft-card text-gray-800 hover:bg-[#e9e9e9] transition-colors whitespace-nowrap"
                       >
                         <SuggestedReplyMarkdown content={reply} />
                       </button>
@@ -2351,7 +2352,7 @@ export default function App() {
                 </button>
               </div>
 
-              <p className="mt-1 text-center text-[11px] text-gray-400">
+              <p className="mt-3 text-center text-[11px] pb-3 text-gray-400">
                 AI can make mistakes. Please double-check responses.
               </p>
             </div>
