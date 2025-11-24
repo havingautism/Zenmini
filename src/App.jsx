@@ -1853,7 +1853,7 @@ export default function App() {
           </header>
 
           {/* 中心聊天区域 */}
-          <main className="flex-1 flex flex-col items-center justify-between px-0 sm:px-10 pb-2 sm:pb-2 pt-0 min-h-0">
+          <main className="flex-1 flex flex-col items-center justify-between px-0 sm:px-10 pb-0 pt-0 min-h-0">
             {/* 中间：标题 + 消息列表 */}
             {/* 中间：标题 + 消息列表 */}
             <div
@@ -2351,7 +2351,7 @@ export default function App() {
                 </button>
               </div>
 
-              <p className="mt-1 text-center text-[11px] text-gray-400">
+              <p className="mt-3 text-center text-[11px] pb-3 text-gray-400">
                 AI can make mistakes. Please double-check responses.
               </p>
             </div>
