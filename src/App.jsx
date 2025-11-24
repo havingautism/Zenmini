@@ -1796,13 +1796,27 @@ export default function App() {
               </button>
             </div>
 
-            <button
-              type="button"
-              className="ml-auto flex items-center justify-center rounded-full bg-black text-white shadow-soft-card w-8 h-8 sm:w-9 sm:h-9"
-              onClick={() => setIsSettingsModalOpen(true)}
-            >
-              <span className="w-5 h-5 rounded-full bg-gradient-to-br from-gray-200 via-gray-50 to-gray-400" />
-            </button>
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleSummarizeChat}
+                disabled={
+                  isLoading || isSummaryLoading || messages.length === 0
+                }
+                className="sm:hidden inline-flex items-center px-3 py-1.5 rounded-full border border-gray-200 text-xs font-medium text-gray-600 bg-white shadow-soft-card disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Sparkles size={14} className="mr-1" />
+                总结
+              </button>
+
+              <button
+                type="button"
+                className="flex items-center justify-center rounded-full bg-black text-white shadow-soft-card w-8 h-8 sm:w-9 sm:h-9"
+                onClick={() => setIsSettingsModalOpen(true)}
+              >
+                <span className="w-5 h-5 rounded-full bg-gradient-to-br from-gray-200 via-gray-50 to-gray-400" />
+              </button>
+            </div>
           </header>
 
           {/* 中心聊天区域 */}
@@ -2262,8 +2276,8 @@ export default function App() {
                 )}
               </form>
 
-              {/* Summarize 入口（为了保留功能，可以弱化为小文字按钮） */}
-              <div className="mt-2 flex justify-end">
+              {/* Summarize 入口（桌面端） */}
+              <div className="mt-2 hidden sm:flex justify-end">
                 <button
                   onClick={handleSummarizeChat}
                   disabled={
