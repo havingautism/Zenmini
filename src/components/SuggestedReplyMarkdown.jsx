@@ -6,7 +6,7 @@ import remarkGfm from "remark-gfm";
 // 主要支持：粗体 / 斜体 / 行内代码 / 链接，避免段落外边距和大段排版
 export default function SuggestedReplyMarkdown({ content }) {
   return (
-    <div className="text-xs text-indigo-800 leading-snug whitespace-pre-wrap break-words">
+    <div className="text-xs text-indigo-800 leading-snug whitespace-nowrap break-keep">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{

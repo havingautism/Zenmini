@@ -1,6 +1,7 @@
 import React from "react";
 import { Sparkles, Loader2, X } from "lucide-react";
 import MarkdownRenderer from "./MarkdownRenderer";
+import Loader from "./Loader";
 export default function SummaryModal({ content, isLoading, onClose }) {
   return (
     <div
@@ -13,7 +14,7 @@ export default function SummaryModal({ content, isLoading, onClose }) {
       >
         <div className="flex justify-between items-center px-6 py-4 border-b border-gray-50">
           <h3 className="text-lg font-semibold flex items-center text-gray-900">
-            <Sparkles size={18} className="mr-2 text-yellow-500" />
+            {/* <Sparkles size={18} className="mr-2 text-yellow-500" /> */}
             对话总结
           </h3>
           <button
@@ -26,8 +27,7 @@ export default function SummaryModal({ content, isLoading, onClose }) {
         <div className="p-6 overflow-y-auto flex-1">
           {isLoading ? (
             <div className="flex justify-center items-center h-24">
-              <Loader2 size={32} className="animate-spin text-indigo-600" />
-              <span className="ml-3 text-gray-700">正在生成总结...</span>
+              <Loader />
             </div>
           ) : (
             <div className="prose prose-sm max-w-none text-gray-800">

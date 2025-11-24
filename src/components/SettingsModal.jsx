@@ -70,9 +70,12 @@ export default function SettingsModal({
           </button>
         </div>
 
-        {/* Mobile Tabs - Horizontal Scroll */}
-        <div className="overflow-x-auto border-b border-gray-100 bg-gray-50/50">
-          <div className="flex px-2 py-2 space-x-1 min-w-max">
+        {/* Mobile Tabs - Responsive Grid */}
+        <div className="border-b border-gray-100 bg-gray-50/50">
+          <div
+            className="grid px-4 py-3 gap-2"
+            style={{ gridTemplateColumns: "repeat(auto-fit, minmax(64px, 1fr))" }}
+          >
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -80,7 +83,7 @@ export default function SettingsModal({
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex flex-col items-center px-3 py-2 rounded-xl text-xs font-medium transition-all duration-200 whitespace-nowrap ${
+                  className={`flex flex-col items-center justify-center px-3 py-2 rounded-xl text-xs font-medium transition-all duration-200 ${
                     isActive
                       ? "bg-black text-white"
                       : "text-gray-500 hover:bg-gray-100"
