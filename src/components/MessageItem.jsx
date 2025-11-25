@@ -11,8 +11,11 @@ import {
   Volume2,
   StopCircle,
   Search,
+  ChevronRight,
+  ChevronLeft,
 } from "lucide-react";
 import MarkdownRenderer from "./MarkdownRenderer";
+import SuggestedReplyMarkdown from "./SuggestedReplyMarkdown";
 import { FaGoogle } from "react-icons/fa";
 import Loader from "./Loader";
 
@@ -39,11 +42,37 @@ export default function MessageItem({
   copiedMessageId,
   onRegenerate,
   isLastModelMessage,
+  suggestedReplies,
+  onSuggestedReplyClick,
 }) {
   const isUser = msg.role === "user";
   const areSourcesVisible = expandedSourcesMessageId === msg.id;
   const [isThinkingVisible, setIsThinkingVisible] = useState(false);
   const [thinkingPhaseIndex, setThinkingPhaseIndex] = useState(0);
+  const suggestedRepliesRef = React.useRef(null);
+  const [showSuggestionsLeftHint, setShowSuggestionsLeftHint] = useState(false);
+  const [showSuggestionsRightHint, setShowSuggestionsRightHint] = useState(false);
+
+  // Handle suggested replies scroll hint
+  useEffect(() => {
+    const el = suggestedRepliesRef.current;
+    if (!el) return;
+
+    const handleScroll = () => {
+      setShowSuggestionsLeftHint(el.scrollLeft > 0);
+      setShowSuggestionsRightHint(
+        el.scrollLeft < el.scrollWidth - el.clientWidth - 5
+      );
+    };
+
+    handleScroll(); // Initial check
+    el.addEventListener("scroll", handleScroll);
+    window.addEventListener("resize", handleScroll);
+    return () => {
+      el.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleScroll);
+    };
+  }, [suggestedReplies]);
 
   const isLoadingBubble = !isUser && msg.isLoading && !msg.content;
   const isThinkingLoading =
@@ -62,7 +91,7 @@ export default function MessageItem({
   }, [isThinkingLoading]);
 
   const botBubbleClass =
-    "bg-bubble-bot text-gray-900 rounded-3xl rounded-bl-sm ";
+    "bg-transparent text-accent w-full ";
 
   return (
     <div className="flex justify-center">
@@ -72,9 +101,9 @@ export default function MessageItem({
         } mt-1 mb-1`}
       >
         <div
-          className={`flex flex-col max-w-[100%] sm:max-w-[80%] shadow-soft-card  ${
+          className={`flex flex-col max-w-[100%] sm:max-w-[80%] ${
             isUser
-              ? "bg-bubble-user text-white rounded-3xl rounded-br-sm"
+              ? "shadow-soft-card bg-bubble-user text-bubble-text-user rounded-3xl rounded-br-sm"
               : botBubbleClass
           }`}
         >
@@ -82,10 +111,10 @@ export default function MessageItem({
             <button
               onClick={() => setIsThinkingVisible((prev) => !prev)}
               className={`flex items-center text-[11px] sm:text-xs font-semibold w-full px-4 py-2 text-left ${
-                isUser ? "text-indigo-100" : "text-gray-600"
+                isUser ? "text-bubble-text-user/80" : "text-accent-subtle"
               } ${
                 isThinkingVisible
-                  ? "bg-[#f3ebe2] rounded-t-3xl"
+                  ? "bg-shell rounded-t-3xl"
                   : "bg-transparent rounded-t-3xl"
               }`}
             >
@@ -103,7 +132,7 @@ export default function MessageItem({
             <div
               className={`px-4 pt-2 ${isThinkingVisible ? "block" : "hidden"}`}
             >
-              <p className="italic text-gray-500 pb-2 border-b border-gray-200 text-[13px] sm:text-[14px]">
+              <p className="italic text-accent-subtle pb-2 border-b border-border text-[13px] sm:text-[14px]">
                 <MarkdownRenderer content={msg.thinkingProcess} />
               </p>
             </div>
@@ -113,7 +142,7 @@ export default function MessageItem({
             {isLoadingBubble ? (
               isThinkingLoading ? (
                 <div className="flex flex-col space-y-1">
-                  <span className="text-sm text-gray-700 mt-0.5">
+                  <span className="text-sm text-accent-subtle mt-0.5">
                     {THINKING_PHASES[thinkingPhaseIndex]}
                   </span>
                   <div>
@@ -121,7 +150,7 @@ export default function MessageItem({
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center space-x-2 text-xs text-gray-500">
+                <div className="flex items-center space-x-2 text-xs text-accent-subtle">
                   <div>
                     <Loader />
                   </div>
@@ -154,7 +183,7 @@ export default function MessageItem({
             )} */}
 
             {msg.sources && msg.sources.length > 0 && (
-              <div className="mt-5 pt-4 border-t border-[#f0e6da]">
+              <div className="mt-5 pt-4 border-t border-border">
                 <button
                   className="flex justify-between items-center w-full text-xs font-semibold mb-1 opacity-80"
                   onClick={() =>
@@ -183,7 +212,7 @@ export default function MessageItem({
                           (query, i) => (
                             <div
                               key={i}
-                              className="text-[10px] bg-gray-100 text-gray-500 px-2 py-1 rounded-full flex items-center"
+                              className="text-[10px] bg-shell text-accent-subtle px-2 py-1 rounded-full flex items-center"
                             >
                               <Search size={10} className="mr-1" />
                               {query}
@@ -197,7 +226,7 @@ export default function MessageItem({
                         <li
                           key={index}
                           id={`source-${index}`}
-                          className="text-xs bg-[#fcfcfc] border border-gray-100 rounded-xl p-2 hover:bg-gray-50 transition-colors scroll-mt-20"
+                          className="text-xs bg-surface border border-border rounded-xl p-2 hover:bg-shell transition-colors scroll-mt-20"
                         >
                           <a
                             href={source.uri}
@@ -207,13 +236,13 @@ export default function MessageItem({
                             title={source.title}
                           >
                             {/* 统一的互联网图标 */}
-                            <div className="flex-shrink-0 mt-0.5 w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                            <div className="flex-shrink-0 mt-0.5 w-5 h-5 rounded-full bg-shell flex items-center justify-center text-accent-subtle">
                               <Globe size={14} />
                             </div>
 
                             {/* 只显示标题，不显示 URL / 域名 */}
                             <div className="flex-1 min-w-0">
-                              <div className="font-medium text-gray-800 truncate group-hover:text-blue-600 transition-colors">
+                              <div className="font-medium text-accent truncate group-hover:text-blue-600 transition-colors">
                                 {source.title || "未命名来源"}
                               </div>
                             </div>
@@ -225,10 +254,47 @@ export default function MessageItem({
                 )}
               </div>
             )}
+
+            {/* Suggested Replies (Only for last model message) */}
+            {isLastModelMessage && suggestedReplies && suggestedReplies.length > 0 && (
+              <div className="mt-5 pt-2 border-t border-border">
+                <div className="relative mb-2">
+                  <div
+                    ref={suggestedRepliesRef}
+                    className="flex items-center gap-2 overflow-x-auto flex-nowrap pt-2 [&::-webkit-scrollbar]:hidden"
+                    style={{
+                      scrollbarWidth: "none",
+                      msOverflowStyle: "none",
+                      WebkitOverflowScrolling: "touch",
+                    }}
+                  >
+                    {suggestedReplies.map((reply, index) => (
+                      <button
+                        key={index}
+                        onClick={() => onSuggestedReplyClick(reply)}
+                        className="px-3 py-2 rounded-3xl bg-shell text-[13px] border border-border text-accent hover:bg-surface transition-colors whitespace-nowrap"
+                      >
+                        <SuggestedReplyMarkdown content={reply} />
+                      </button>
+                    ))}
+                  </div>
+                  {showSuggestionsLeftHint && (
+                    <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-surface via-surface/80 to-transparent rounded-l-3xl flex items-center pl-1 text-accent-subtle">
+                      <ChevronLeft size={14} />
+                    </div>
+                  )}
+                  {showSuggestionsRightHint && (
+                    <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-surface via-surface/80 to-transparent rounded-r-3xl flex items-center justify-end pr-1 text-accent-subtle">
+                      <ChevronRight size={14} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {!isUser && !isLoadingBubble && !isThinkingLoading && (
-            <div className="mt-auto pt-2 px-4 pb-2 border-t border-gray-100 flex items-center justify-between space-x-1 text-[12px] sm:text-[13px]">
+            <div className="mt-auto pt-2 px-4 pb-2 border-t border-border flex items-center justify-between space-x-1 text-[12px] sm:text-[13px]">
               <div className="flex items-center space-x-3">
                 {msg.generatedWithThinking && (
                   <div
@@ -254,7 +320,7 @@ export default function MessageItem({
                 ) : (
                   <button
                     onClick={() => onCopy(msg.content, msg.id)}
-                    className="p-1.5 rounded-full bg-[#e9e9e9c2] hover:bg-[#e9e9e9] text-gray-800 transition-colors"
+                    className="p-1.5 rounded-full bg-surface hover:bg-shell text-accent transition-colors"
                     title="复制"
                   >
                     <Copy size={16} />
@@ -264,7 +330,7 @@ export default function MessageItem({
                 {isLastModelMessage && (
                   <button
                     onClick={onRegenerate}
-                    className="p-1.5 rounded-full bg-[#e9e9e9c2] hover:bg-[#e9e9e9] text-gray-800 transition-colors"
+                    className="p-1.5 rounded-full bg-surface hover:bg-shell text-accent transition-colors"
                     title="重新生成"
                   >
                     <RefreshCw size={16} />
@@ -282,7 +348,7 @@ export default function MessageItem({
                     msg.role === "model") ? (
                   <button
                     onClick={onStopAudio}
-                    className="p-1.5 rounded-full bg-[#e9e9e9c2] hover:bg-[#e9e9e9] text-gray-800 transition-colors"
+                    className="p-1.5 rounded-full bg-surface hover:bg-shell text-accent transition-colors"
                     title="停止播放"
                   >
                     <StopCircle size={16} />
@@ -290,7 +356,7 @@ export default function MessageItem({
                 ) : (
                   <button
                     onClick={() => onPlayAudio(msg)}
-                    className="p-1.5 rounded-full bg-[#e9e9e9c2] hover:bg-[#e9e9e9] text-gray-800 transition-colors"
+                    className="p-1.5 rounded-full bg-surface hover:bg-shell text-accent transition-colors"
                     title="播放语音"
                   >
                     <Volume2 size={16} />
@@ -305,7 +371,7 @@ export default function MessageItem({
                 ) : (
                   <button
                     onClick={() => onTranslate(msg)}
-                    className="p-1.5 rounded-full bg-[#e9e9e9c2] hover:bg-[#e9e9e9] text-gray-800 transition-colors"
+                    className="p-1.5 rounded-full bg-surface hover:bg-shell text-accent transition-colors"
                     title={translatedText ? "隐藏翻译" : "翻译"}
                   >
                     <Languages size={16} />

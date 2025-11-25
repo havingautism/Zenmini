@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: "class",
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
@@ -16,33 +17,30 @@ export default {
         ],
       },
       colors: {
-        shell: {
-          DEFAULT: "#f5f3f0", // outer background
-        },
-        surface: {
-          DEFAULT: "#f8f5f2", // inner card
-        },
+        shell: "var(--color-shell)",
+        surface: "var(--color-surface)",
+        highlight: "var(--color-highlight)",
         bubble: {
-          user: "#111827",
-          bot: "#ffffff",
-          hint: "#f3ebe2",
+          user: "var(--color-bubble-user)",
+          bot: "var(--color-bubble-bot)",
+          hint: "var(--color-surface)", // fallback or specific hint color
+          "text-user": "var(--color-text-bubble-user)",
+          "text-bot": "var(--color-text-bubble-bot)",
         },
         accent: {
-          DEFAULT: "#111827",
-          subtle: "#e5ded4",
+          DEFAULT: "var(--color-text-main)",
+          subtle: "var(--color-text-muted)",
         },
+        border: "var(--color-border)",
+        input: "var(--color-input-bg)",
       },
       borderRadius: {
         "3xl": "1.75rem",
         "4xl": "2.25rem",
       },
       boxShadow: {
-        "soft-card": "0 18px 60px rgba(15,23,42,0.08)",
-        // "soft-card": `
-        //   0 4px 6px rgba(0,0,0,0.1),
-        //   0 10px 20px rgba(0,0,0,0.05),
-        //   0 15px 35px rgba(0,0,0,0.03)
-        // `,
+        "soft-card": "0 18px 60px rgba(0,0,0,0.08)",
+        "dark-card": "0 18px 60px rgba(0,0,0,0.3)",
       },
     },
   },
