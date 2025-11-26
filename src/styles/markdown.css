@@ -1,14 +1,20 @@
-/* 优化的Markdown样式 - 浅色主题 */
+/* 优化的Markdown样式 */
 
 .markdown-content {
   line-height: 1.7;
-  color: #333;
+  color: var(--color-text-main);
 }
 
-/* 代码高亮自定义样式 - 浅色主题 */
+/* 代码高亮自定义样式 */
 .markdown-content .hljs {
-  background: #f8f9fa !important;
-  color: #333;
+  background: var(--color-surface) !important;
+  color: var(--color-text-main) !important;
+}
+
+html.dark .markdown-content .hljs {
+  background: #2d2d2d !important;
+  /* Slightly lighter than surface for contrast */
+  color: #e5e7eb !important;
 }
 
 .markdown-content .hljs-comment,
@@ -17,10 +23,21 @@
   font-style: italic;
 }
 
+html.dark .markdown-content .hljs-comment,
+html.dark .markdown-content .hljs-quote {
+  color: #8b949e;
+}
+
 .markdown-content .hljs-keyword,
 .markdown-content .hljs-selector-tag,
 .markdown-content .hljs-subst {
   color: #d73a49;
+}
+
+html.dark .markdown-content .hljs-keyword,
+html.dark .markdown-content .hljs-selector-tag,
+html.dark .markdown-content .hljs-subst {
+  color: #ff7b72;
 }
 
 .markdown-content .hljs-number,
@@ -31,9 +48,22 @@
   color: #005cc5;
 }
 
+html.dark .markdown-content .hljs-number,
+html.dark .markdown-content .hljs-literal,
+html.dark .markdown-content .hljs-variable,
+html.dark .markdown-content .hljs-template-variable,
+html.dark .markdown-content .hljs-tag .hljs-attr {
+  color: #79c0ff;
+}
+
 .markdown-content .hljs-string,
 .markdown-content .hljs-doctag {
   color: #032f62;
+}
+
+html.dark .markdown-content .hljs-string,
+html.dark .markdown-content .hljs-doctag {
+  color: #a5d6ff;
 }
 
 .markdown-content .hljs-title,
@@ -42,15 +72,32 @@
   color: #6f42c1;
 }
 
+html.dark .markdown-content .hljs-title,
+html.dark .markdown-content .hljs-section,
+html.dark .markdown-content .hljs-selector-id {
+  color: #d2a8ff;
+}
+
 .markdown-content .hljs-type,
 .markdown-content .hljs-class .hljs-title {
   color: #22863a;
 }
 
+html.dark .markdown-content .hljs-type,
+html.dark .markdown-content .hljs-class .hljs-title {
+  color: #7ee787;
+}
+
 .markdown-content .hljs-tag,
 .markdown-content .hljs-name,
 .markdown-content .hljs-attribute {
-  color: #6f42c1;
+  color: #22863a;
+}
+
+html.dark .markdown-content .hljs-tag,
+html.dark .markdown-content .hljs-name,
+html.dark .markdown-content .hljs-attribute {
+  color: #7ee787;
 }
 
 .markdown-content .hljs-regexp,
@@ -58,11 +105,23 @@
   color: #e36209;
 }
 
+html.dark .markdown-content .hljs-regexp,
+html.dark .markdown-content .hljs-link {
+  color: #ffa657;
+}
+
 .markdown-content .hljs-symbol,
 .markdown-content .hljs-bullet,
 .markdown-content .hljs-built_in,
 .markdown-content .hljs-builtin-name {
-  color: #22863a;
+  color: #e36209;
+}
+
+html.dark .markdown-content .hljs-symbol,
+html.dark .markdown-content .hljs-bullet,
+html.dark .markdown-content .hljs-built_in,
+html.dark .markdown-content .hljs-builtin-name {
+  color: #ffa657;
 }
 
 .markdown-content .hljs-meta,
@@ -70,10 +129,21 @@
   color: #cb2431;
 }
 
+html.dark .markdown-content .hljs-meta,
+html.dark .markdown-content .hljs-deletion {
+  color: #ffa198;
+}
+
 .markdown-content .hljs-addition,
 .markdown-content .hljs-emphasis,
 .markdown-content .hljs-strong {
   color: #0969da;
+}
+
+html.dark .markdown-content .hljs-addition,
+html.dark .markdown-content .hljs-emphasis,
+html.dark .markdown-content .hljs-strong {
+  color: #1f6feb;
 }
 
 /* 任务列表样式 */
@@ -89,7 +159,7 @@
 /* 代码块滚动条样式 */
 .markdown-content code {
   scrollbar-width: thin;
-  scrollbar-color: #cbd5e0 #f7fafc;
+  scrollbar-color: var(--color-border) var(--color-shell);
 }
 
 .markdown-content code::-webkit-scrollbar {
@@ -98,17 +168,17 @@
 }
 
 .markdown-content code::-webkit-scrollbar-track {
-  background: #f7fafc;
+  background: var(--color-shell);
   border-radius: 3px;
 }
 
 .markdown-content code::-webkit-scrollbar-thumb {
-  background: #cbd5e0;
+  background: var(--color-border);
   border-radius: 3px;
 }
 
 .markdown-content code::-webkit-scrollbar-thumb:hover {
-  background: #a0aec0;
+  background: var(--color-text-muted);
 }
 
 /* 表格响应式优化 */
@@ -129,7 +199,7 @@
 }
 
 /* 行内代码优化 */
-.markdown-content :not(pre) > code {
+.markdown-content :not(pre)>code {
   word-break: break-all;
 }
 

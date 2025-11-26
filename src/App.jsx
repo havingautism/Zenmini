@@ -40,7 +40,11 @@ import {
   ChevronRight,
   Settings,
   Send,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react";
+import { useTheme } from "./context/ThemeContext";
 import MarkdownRenderer from "./components/MarkdownRenderer";
 import {
   callGeminiApi,
@@ -78,9 +82,44 @@ import SettingsModal from "./components/SettingsModal";
 import SchemaInitModal from "./components/SchemaInitModal";
 import Loader from "./components/Loader";
 import BlackHole from "./components/BlackHole";
-import SuggestedReplyMarkdown from "./components/SuggestedReplyMarkdown";
+
+const THEME_TOGGLE_OPTIONS = [
+  { value: "light", title: "浅色模式", Icon: Sun },
+  { value: "dark", title: "深色模式", Icon: Moon },
+  { value: "system", title: "跟随系统", Icon: Monitor },
+];
+
+function ThemeToggleButtons({ currentTheme, onSelect, className = "" }) {
+  return (
+    <div className={className}>
+      {THEME_TOGGLE_OPTIONS.map(({ value, Icon, title }) => {
+        const isActive = currentTheme === value;
+        const activeClasses =
+          value === "system"
+            ? "bg-shell text-accent shadow-md scale-110"
+            : "bg-accent text-surface shadow-md scale-110";
+        const inactiveClasses = "text-accent-subtle hover:text-accent";
+
+        return (
+          <button
+            type="button"
+            key={value}
+            onClick={() => onSelect(value)}
+            className={`w-9 h-9 rounded-2xl flex items-center justify-center transition-all duration-200 ${
+              isActive ? activeClasses : inactiveClasses
+            }`}
+            title={title}
+          >
+            <Icon size={16} />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function App() {
+  const { theme, setTheme } = useTheme();
   const [client, setClient] = useState(null);
   const [isConfigMissing, setIsConfigMissing] = useState(false);
   const [appId, setAppId] = useState("default-app-id");
@@ -96,8 +135,6 @@ export default function App() {
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const [summaryContent, setSummaryContent] = useState("");
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
-
-  const [suggestedReplies, setSuggestedReplies] = useState([]);
 
   const [isTtsLoading, setIsTtsLoading] = useState(null);
   const [playingMessageId, setPlayingMessageId] = useState(null);
@@ -141,11 +178,7 @@ export default function App() {
   const mobileOptionsRef = useRef(null);
   const modelMenuRef = useRef(null);
   const scrollRef = useRef(null);
-  const suggestedRepliesRef = useRef(null);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [showSuggestionsLeftHint, setShowSuggestionsLeftHint] = useState(false);
-  const [showSuggestionsRightHint, setShowSuggestionsRightHint] =
-    useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -168,11 +201,12 @@ export default function App() {
   // 初始化 Supabase
   const initApp = async (cid) => {
     console.log("[initApp] Starting with cid:", cid);
-    let configToUse = loadSupabaseConfigFromLocalStorage();
-    console.log("[initApp] Config from localStorage:", configToUse);
+    let configToUse = loadSupabaseConfigFromEnv();
+    console.log("[initApp] Config from env:", configToUse);
+
     if (!configToUse) {
-      configToUse = loadSupabaseConfigFromEnv();
-      console.log("[initApp] Config from env:", configToUse);
+      configToUse = loadSupabaseConfigFromLocalStorage();
+      console.log("[initApp] Config from localStorage:", configToUse);
     }
     if (configToUse) setLocalSbConfig(configToUse);
 
@@ -207,34 +241,7 @@ export default function App() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, suggestedReplies, isLoading]);
-
-  useEffect(() => {
-    const container = suggestedRepliesRef.current;
-    if (!container || suggestedReplies.length === 0) {
-      setShowSuggestionsLeftHint(false);
-      setShowSuggestionsRightHint(false);
-      return;
-    }
-
-    const updateHints = () => {
-      if (!suggestedRepliesRef.current) return;
-      const { scrollLeft, scrollWidth, clientWidth } =
-        suggestedRepliesRef.current;
-      setShowSuggestionsLeftHint(scrollLeft > 4);
-      setShowSuggestionsRightHint(scrollLeft < scrollWidth - clientWidth - 4);
-    };
-
-    updateHints();
-
-    container.addEventListener("scroll", updateHints, { passive: true });
-    window.addEventListener("resize", updateHints);
-
-    return () => {
-      container.removeEventListener("scroll", updateHints);
-      window.removeEventListener("resize", updateHints);
-    };
-  }, [suggestedReplies.length]);
+  }, [messages, isLoading]);
 
   useEffect(() => {
     if (!isUploadMenuOpen && !isMobileOptionsOpen) return;
@@ -372,28 +379,14 @@ export default function App() {
               msg.generatedWithThinking || msg.generated_with_thinking,
             generatedWithSearch:
               msg.generatedWithSearch || msg.generated_with_search,
+            suggestedReplies: Array.isArray(msg.suggestedReplies)
+              ? msg.suggestedReplies
+              : Array.isArray(msg.suggested_replies)
+              ? msg.suggested_replies
+              : [],
           }));
 
           setMessages(mappedMessages || []);
-
-          // 检查最后一条消息是否有延伸问题，如果有则显示
-          const lastMessage = mappedMessages[mappedMessages.length - 1];
-          if (lastMessage && lastMessage.role === "model") {
-            try {
-              const replies = Array.isArray(lastMessage.suggested_replies)
-                ? lastMessage.suggested_replies
-                : Array.isArray(lastMessage.suggestedReplies)
-                ? lastMessage.suggestedReplies
-                : [];
-              setSuggestedReplies(replies);
-            } catch (e) {
-              console.warn(
-                "suggested_replies field not available in database:",
-                e
-              );
-              setSuggestedReplies([]);
-            }
-          }
         }
       } catch (e) {
         console.error("Failed to load history messages:", e);
@@ -418,8 +411,7 @@ export default function App() {
     [messages]
   );
 
-  const fetchSuggestedReplies = async (history, updateLocalState = true) => {
-    if (updateLocalState) setSuggestedReplies([]);
+  const fetchSuggestedReplies = async (history) => {
     const systemPrompt =
       "Based on the *last* message in the conversation, generate 3 very short, concise, one-click replies for the user to send next. The replies should be in the same language as the conversation (e.g., Chinese if the convo is in Chinese). Only output the JSON object.";
     const schema = {
@@ -437,7 +429,6 @@ export default function App() {
         userApiKey
       );
       const replies = result && result.replies ? result.replies : [];
-      if (updateLocalState) setSuggestedReplies(replies);
       return replies;
     } catch (e) {
       console.error("Failed to fetch suggested replies:", e);
@@ -449,7 +440,6 @@ export default function App() {
     setSessionMenuId(null);
     setActiveSessionId(null);
     setMessages([]);
-    setSuggestedReplies([]);
     setIsSessionActive(false);
     setIsSidebarOpen(false);
 
@@ -510,7 +500,6 @@ export default function App() {
       if (activeSessionId === sessionId) {
         setActiveSessionId(null);
         setMessages([]);
-        setSuggestedReplies([]);
         setIsSessionActive(false);
       }
     } catch (err) {
@@ -579,7 +568,6 @@ export default function App() {
       // 切换会话时清空当前 UI，并展示加载态
       setIsSessionActive(false);
       setMessages([]);
-      setSuggestedReplies([]);
       setIsSessionLoading(true);
       setActiveSessionId(id);
     }
@@ -598,7 +586,6 @@ export default function App() {
 
     setIsLoading(true);
     setCurrentInput("");
-    setSuggestedReplies([]);
     setIsSessionActive(true);
 
     const userMessage = {
@@ -667,6 +654,7 @@ export default function App() {
           generatedWithThinking: isThinkingMode && !suppressThinkingBubble,
           generatedWithSearch: isSearchMode,
           created_at: modelCreatedAt,
+          suggestedReplies: [],
         },
       ]);
 
@@ -809,15 +797,18 @@ export default function App() {
 
       let suggestedReplies = [];
       try {
-        suggestedReplies = await fetchSuggestedReplies(
-          finalHistoryForReplies,
-          false
-        );
-        setSuggestedReplies(suggestedReplies);
+        suggestedReplies = await fetchSuggestedReplies(finalHistoryForReplies);
       } catch (e) {
         console.error("Failed to fetch suggested replies:", e);
-        setSuggestedReplies([]);
+        suggestedReplies = [];
       }
+
+      const repliesForState = suggestedReplies;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === modelMessageId ? { ...m, suggestedReplies: repliesForState } : m
+        )
+      );
 
       setTimeout(async () => {
         try {
@@ -913,7 +904,6 @@ export default function App() {
 
     setIsLoading(true);
     setCurrentInput("");
-    setSuggestedReplies([]);
     setIsSessionActive(true); // 标记会话为活跃状态
 
     // 创建用户消息并立即显示
@@ -977,6 +967,7 @@ export default function App() {
         generatedWithThinking: !!aiResponse.thinkingProcess,
         generatedWithSearch: isSearchMode,
         created_at: new Date().toISOString(),
+        suggestedReplies: [],
       };
 
       setMessages((prev) => [...prev, modelMessage]);
@@ -990,16 +981,18 @@ export default function App() {
       // 获取延伸问题并保存到数据库
       let suggestedReplies = [];
       try {
-        suggestedReplies = await fetchSuggestedReplies(
-          finalHistoryForReplies,
-          false
-        );
-        // 手动更新延伸问题显示
-        setSuggestedReplies(suggestedReplies);
+        suggestedReplies = await fetchSuggestedReplies(finalHistoryForReplies);
       } catch (e) {
         console.error("Failed to fetch suggested replies:", e);
-        setSuggestedReplies([]);
+        suggestedReplies = [];
       }
+
+      const repliesForState = suggestedReplies;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === modelMessage.id ? { ...m, suggestedReplies: repliesForState } : m
+        )
+      );
 
       // 后台异步保存AI消息到数据库（包含延伸问题，完全不阻塞UI）
       setTimeout(() => {
@@ -1206,7 +1199,6 @@ export default function App() {
     const db = client;
     if (isLoading || !userId || !activeSessionId || !db) return;
     setIsLoading(true);
-    setSuggestedReplies([]);
     setIsSessionActive(true);
 
     let modelMessageId = null;
@@ -1242,6 +1234,7 @@ export default function App() {
           generatedWithThinking: isThinkingMode,
           generatedWithSearch: isSearchMode,
           created_at: modelCreatedAt,
+          suggestedReplies: [],
         },
       ]);
 
@@ -1408,15 +1401,18 @@ export default function App() {
 
       let suggestedReplies = [];
       try {
-        suggestedReplies = await fetchSuggestedReplies(
-          finalHistoryForReplies,
-          false
-        );
-        setSuggestedReplies(suggestedReplies);
+        suggestedReplies = await fetchSuggestedReplies(finalHistoryForReplies);
       } catch (e) {
         console.error("Failed to fetch suggested replies:", e);
-        setSuggestedReplies([]);
+        suggestedReplies = [];
       }
+
+      const repliesForState = suggestedReplies;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === modelMessageId ? { ...m, suggestedReplies: repliesForState } : m
+        )
+      );
 
       setTimeout(async () => {
         try {
@@ -1548,14 +1544,14 @@ export default function App() {
   const showMobileOverlay = isUploadMenuOpen || isMobileOptionsOpen;
 
   return (
-    <div className="h-screen w-full bg-gray-100 flex items-center justify-center p-0 sm:p-2 text-gray-900">
-      <div className="relative flex w-full  h-full  bg-white rounded-none sm:rounded-4xl shadow-soft-card border border-gray-200 overflow-hidden">
+    <div className="h-screen w-full bg-shell flex items-center justify-center p-0 sm:p-2 text-accent transition-colors duration-300">
+      <div className="relative flex w-full  h-full  bg-surface rounded-none sm:rounded-4xl shadow-soft-card border border-border overflow-hidden">
         {/* 左侧竖向图标栏（桌面端可见） */}
-        <div className="hidden sm:flex flex-col justify-between py-5 px-8 w-12 shadow-soft-card">
+        <div className="hidden sm:flex flex-col bg-surface justify-between py-5 px-8 w-12 ">
           <div className="flex flex-col items-center space-y-5">
             <button
               onClick={handleNewChat}
-              className="w-9 h-9 rounded-2xl shadow-soft-card bg-black text-white flex items-center justify-center"
+              className="w-9 h-9 rounded-2xl shadow-soft-card bg-accent text-surface flex items-center justify-center"
               title="新建对话"
             >
               <MessageSquarePlus size={18} />
@@ -1564,17 +1560,24 @@ export default function App() {
               <Bot size={16} />
             </button> */}
             <button
-              className="w-9 h-9 rounded-2xl shadow-soft-card bg-white/40 text-gray-300 border border-[#efe5da] flex items-center justify-center"
+              className="w-9 h-9 rounded-2xl shadow-soft-card bg-surface text-accent-subtle border border-border flex items-center justify-center hover:bg-shell transition-colors"
               title="会话历史"
               onClick={() => setIsSidebarOpen((prev) => !prev)}
             >
-              <History size={15} color="black" />
+              <History size={15} />
             </button>
           </div>
+
+          {/* Theme Switcher */}
+          <ThemeToggleButtons
+            currentTheme={theme}
+            onSelect={setTheme}
+            className="flex flex-col items-center space-y-3"
+          />
         </div>
 
         {showMobileOverlay && (
-          <div className="sm:hidden pointer-events-none absolute inset-0 z-30 bg-white/60 backdrop-blur-md transition-opacity duration-200" />
+          <div className="sm:hidden pointer-events-none absolute inset-0 z-30 bg-surface/60 backdrop-blur-md transition-opacity duration-200" />
         )}
 
         {/* 会话侧边栏（移动端，仅会话历史） */}
@@ -1584,21 +1587,21 @@ export default function App() {
             onClick={() => setIsSidebarOpen(false)}
           >
             <div
-              className="w-full h-[70vh] max-w-md rounded-t-3xl bg-white border border-gray-200 shadow-soft-card flex flex-col overflow-hidden"
+              className="w-full h-[70vh] max-w-md rounded-t-3xl bg-surface border border-border shadow-soft-card flex flex-col overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                <h2 className="text-lg font-bold text-gray-900">会话历史</h2>
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                <h2 className="text-lg font-bold text-accent">会话历史</h2>
                 <button
                   type="button"
                   onClick={() => setIsSidebarOpen(false)}
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors"
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-accent-subtle hover:bg-shell transition-colors"
                 >
                   <X size={20} />
                 </button>
               </div>
 
-              <div className="px-3 py-2 border-b border-gray-100">
+              <div className="px-3 py-2 border-b border-border">
                 <div className="relative">
                   <Search
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -1609,7 +1612,7 @@ export default function App() {
                     placeholder="搜索对话..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full rounded-xl bg-gray-50 border-none py-2 pl-9 pr-3 text-xs text-gray-700 placeholder:text-gray-400 focus:ring-1 focus:ring-black/5 transition-all"
+                    className="w-full rounded-xl bg-shell border-none py-2 pl-9 pr-3 text-xs text-accent placeholder:text-accent-subtle focus:ring-1 focus:ring-accent/5 transition-all"
                   />
                 </div>
               </div>
@@ -1647,8 +1650,8 @@ export default function App() {
                                 }}
                                 className={`group flex w-full items-center rounded-xl px-2 py-2 text-left transition-colors ${
                                   isActive
-                                    ? "bg-black text-white"
-                                    : "bg-white hover:bg-gray-100 text-gray-900"
+                                    ? "bg-accent text-surface"
+                                    : "bg-surface hover:bg-shell text-accent"
                                 }`}
                               >
                                 <div className="flex min-w-0 flex-1 flex-col">
@@ -1690,7 +1693,7 @@ export default function App() {
                 )}
               </div>
 
-              <div className="border-t border-gray-100 px-4 py-3 text-[11px] text-gray-400 flex items-center justify-between">
+              <div className="border-t border-border px-4 py-3 text-[11px] text-gray-400 flex items-center justify-between">
                 <span>会话数：{sessions.length}</span>
               </div>
             </div>
@@ -1699,15 +1702,15 @@ export default function App() {
 
         {/* 会话侧边栏（桌面端，仅会话历史） */}
         {isSidebarOpen && (
-          <div className="hidden sm:flex absolute inset-y-3 left-3 w-72 rounded-3xl bg-white border border-gray-100 shadow-2xl z-30 flex-col">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-              <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <div className="hidden sm:flex absolute inset-y-3 left-3 w-72 rounded-3xl bg-surface border border-border shadow-2xl z-30 flex-col">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <span className="text-xs font-semibold uppercase tracking-wide text-accent-subtle">
                 所有对话
               </span>
               <button
                 type="button"
                 onClick={() => setIsSidebarOpen(false)}
-                className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100"
+                className="w-7 h-7 rounded-full flex items-center justify-center text-accent-subtle hover:bg-shell"
               >
                 ×
               </button>
@@ -1724,7 +1727,7 @@ export default function App() {
                   placeholder="搜索对话..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full rounded-xl bg-gray-50 border-none py-2 pl-9 pr-3 text-xs text-gray-700 placeholder:text-gray-400 focus:ring-1 focus:ring-black/5 transition-all"
+                  className="w-full rounded-xl bg-shell border-none py-2 pl-9 pr-3 text-xs text-accent placeholder:text-accent-subtle focus:ring-1 focus:ring-accent/5 transition-all"
                 />
               </div>
             </div>
@@ -1753,8 +1756,8 @@ export default function App() {
                               onClick={() => handleSelectSession(session.id)}
                               className={`group flex w-full items-center rounded-xl px-2 py-2 text-left transition-colors ${
                                 isActive
-                                  ? "bg-black text-white"
-                                  : "bg-white hover:bg-gray-100 text-gray-900"
+                                  ? "bg-accent text-surface"
+                                  : "bg-surface hover:bg-shell text-accent"
                               }`}
                             >
                               <div className="flex min-w-0 flex-1 flex-col">
@@ -1795,7 +1798,7 @@ export default function App() {
                 }
               )}
             </div>
-            <div className="border-t border-gray-100 px-4 py-3 text-[11px] text-gray-400 flex items-center justify-between">
+            <div className="border-t border-border px-4 py-3 text-[11px] text-gray-400 flex items-center justify-between">
               <span>会话数：{sessions.length}</span>
             </div>
           </div>
@@ -1807,7 +1810,7 @@ export default function App() {
           <header
             className={`flex items-center justify-between px-4 sm:px-8 py-2 sm:py-5 transition-all duration-200 ${
               isScrolled
-                ? "bg-white/80 backdrop-blur-md shadow-soft-card sm:shadow-sm z-10"
+                ? "bg-surface/80 backdrop-blur-md shadow-soft-card sm:shadow-sm z-10"
                 : "bg-transparent"
             }`}
           >
@@ -1815,15 +1818,15 @@ export default function App() {
             <div className="flex items-center gap-2 sm:hidden">
               <button
                 type="button"
-                className="w-8 h-8 rounded-2xl border shadow-soft-card border-[#e4d9ce] flex items-center justify-center text-gray-400 bg-white/80"
+                className="w-8 h-8 rounded-2xl shadow-soft-card bg-surface text-accent-subtle border border-border flex items-center justify-center hover:bg-shell transition-colors"
                 onClick={() => setIsSidebarOpen(true)}
               >
-                <History size={15} color="black" />
+                <History size={15} />
               </button>
               <button
                 type="button"
                 onClick={handleNewChat}
-                className="w-8 h-8 rounded-2xl bg-black text-white flex items-center justify-center shadow-soft-card"
+                className="w-8 h-8 rounded-2xl bg-accent text-surface flex items-center justify-center shadow-soft-card hover:bg-accent/90 transition-colors"
               >
                 <MessageSquarePlus size={15} />
               </button>
@@ -1864,7 +1867,7 @@ export default function App() {
                 {/* 首屏标题和黑洞效果 */}
                 {messages.length === 0 && !isSessionLoading && (
                   <div className="pt-8 pb-10 text-center">
-                    <h1 className="text-3xl sm:text-4xl font-semibold text-black mb-16">
+                    <h1 className="text-3xl sm:text-4xl font-semibold text-accent mb-16">
                       {/* What can I help with? */}
                       我有什么能帮您的?
                     </h1>
@@ -1906,6 +1909,7 @@ export default function App() {
                           .slice(index + 1)
                           .every((m) => m.role !== "model")
                       }
+                      onSuggestedReplyClick={handleSuggestedReplyClick}
                     />
                   ))}
 
@@ -1928,47 +1932,15 @@ export default function App() {
 
             {/* 建议问句 + 输入区域 */}
             <div className="w-full max-w-3xl px-3 ">
-              <div className="h-[3px] mx-4 bg-[#d1d1d10d] shadow-soft-card" />
-              {suggestedReplies.length > 0 && (
-                <div className="relative mb-2 ">
-                  <div
-                    ref={suggestedRepliesRef}
-                    className="flex items-center gap-2 overflow-x-auto flex-nowrap rounded-[26px] shadow-soft-card px-3 py-2 bg-white [&::-webkit-scrollbar]:hidden"
-                    style={{
-                      scrollbarWidth: "none",
-                      msOverflowStyle: "none",
-                      WebkitOverflowScrolling: "touch",
-                    }}
-                  >
-                    {suggestedReplies.map((reply, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleSuggestedReplyClick(reply)}
-                        className="px-3 py-2 rounded-3xl bg-[#e9e9e9c2] text-[13px] shadow-soft-card text-gray-800 hover:bg-[#e9e9e9] transition-colors whitespace-nowrap"
-                      >
-                        <SuggestedReplyMarkdown content={reply} />
-                      </button>
-                    ))}
-                  </div>
-                  {showSuggestionsLeftHint && (
-                    <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-white via-white/80 to-transparent rounded-[26px] flex items-center pl-2 text-gray-400">
-                      <ChevronLeft size={16} />
-                    </div>
-                  )}
-                  {showSuggestionsRightHint && (
-                    <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white via-white/80 to-transparent rounded-[26px] flex items-center justify-end pr-2 text-gray-400">
-                      <ChevronRight size={16} />
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* <div className="h-[3px] mx-4 bg-[#d1d1d10d] shadow-soft-card" /> */}
+              {/* 建议问句已移动到 MessageItem */}
 
               {/* 输入卡片 */}
               <form
                 onSubmit={handleSendMessage}
                 className="relative w-full z-40"
               >
-                <div className="flex items-center rounded-[26px] bg-white shadow-soft-card  px-4 py-2 sm:py-3">
+                <div className="flex items-center rounded-[26px] bg-highlight shadow-soft-card px-4 py-2 sm:py-3">
                   {/* 左侧工具按钮：上传 / Mobile Options / Desktop Toggles */}
                   <div
                     className="flex items-center space-x-2 mr-3 text-gray-400"
@@ -1983,7 +1955,7 @@ export default function App() {
                           return next;
                         })
                       }
-                      className="w-6 h-6 rounded-full border border-[#e4d7c8] flex items-center justify-center hover:bg-bubble-hint/60 transition-colors"
+                      className="w-6 h-6 rounded-full border border-border flex items-center justify-center hover:bg-shell transition-colors"
                       title="上传文件"
                     >
                       <Plus size={14} />
@@ -2000,7 +1972,7 @@ export default function App() {
                             return next;
                           })
                         }
-                        className="w-6 h-6 rounded-full border border-[#e4d7c8] flex items-center justify-center hover:bg-bubble-hint/60 transition-colors"
+                        className="w-6 h-6 rounded-full border border-border flex items-center justify-center hover:bg-shell transition-colors"
                         title="模型与功能"
                       >
                         <SlidersHorizontal size={13} />
@@ -2008,8 +1980,8 @@ export default function App() {
 
                       {/* 移动端功能菜单 */}
                       {isMobileOptionsOpen && (
-                        <div className="absolute bottom-full left-8 mb-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-50 overflow-hidden">
-                          <div className="px-3 py-2 border-b border-gray-100 text-xs font-semibold text-gray-500 bg-gray-50">
+                        <div className="absolute bottom-full left-8 mb-2 w-56 bg-surface border border-border rounded-2xl shadow-soft-card z-50 overflow-hidden">
+                          <div className="px-3 py-2 border-b border-border text-xs font-semibold text-accent-subtle bg-shell">
                             模型与功能
                           </div>
 
@@ -2023,8 +1995,8 @@ export default function App() {
                               }}
                               className={`flex items-center w-full px-3 py-2 text-left text-sm rounded-lg transition-colors ${
                                 selectedModel === "gemini-2.5-flash"
-                                  ? "bg-bubble-hint text-gray-900 font-medium"
-                                  : "text-gray-700 hover:bg-gray-50"
+                                  ? "bg-bubble-hint text-accent font-medium"
+                                  : "text-accent-subtle hover:bg-shell"
                               }`}
                             >
                               <span className="flex-1">Gemini 2.5 Flash</span>
@@ -2040,8 +2012,8 @@ export default function App() {
                               }}
                               className={`flex items-center w-full px-3 py-2 text-left text-sm rounded-lg transition-colors ${
                                 selectedModel === "gemini-2.5-pro"
-                                  ? "bg-bubble-hint text-gray-900 font-medium"
-                                  : "text-gray-700 hover:bg-gray-50"
+                                  ? "bg-bubble-hint text-accent font-medium"
+                                  : "text-accent-subtle hover:bg-shell"
                               }`}
                             >
                               <span className="flex-1">Gemini 2.5 Pro</span>
@@ -2057,26 +2029,26 @@ export default function App() {
                           <button
                             type="button"
                             onClick={() => setIsThinkingMode(!isThinkingMode)}
-                            className="flex items-center justify-between w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                            className="flex items-center justify-between w-full px-3 py-2 text-left text-sm text-accent-subtle hover:bg-shell transition-colors"
                           >
                             <div className="flex items-center">
                               <Brain
                                 size={16}
                                 className={`mr-2 ${
                                   isThinkingMode
-                                    ? "text-black"
-                                    : "text-gray-400"
+                                    ? "text-accent"
+                                    : "text-accent-subtle"
                                 }`}
                               />
                               <span>思考模式</span>
                             </div>
                             <div
                               className={`w-8 h-4 rounded-full relative transition-colors ${
-                                isThinkingMode ? "bg-black" : "bg-gray-200"
+                                isThinkingMode ? "bg-accent" : "bg-shell"
                               }`}
                             >
                               <div
-                                className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${
+                                className={`absolute top-0.5 w-3 h-3 rounded-full bg-surface transition-transform ${
                                   isThinkingMode ? "left-4.5" : "left-0.5"
                                 }`}
                                 style={{
@@ -2089,24 +2061,26 @@ export default function App() {
                           <button
                             type="button"
                             onClick={() => setIsSearchMode(!isSearchMode)}
-                            className="flex items-center justify-between w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                            className="flex items-center justify-between w-full px-3 py-2 text-left text-sm text-accent-subtle hover:bg-shell transition-colors"
                           >
                             <div className="flex items-center">
                               <Globe
                                 size={16}
                                 className={`mr-2 ${
-                                  isSearchMode ? "text-black" : "text-gray-400"
+                                  isSearchMode
+                                    ? "text-accent"
+                                    : "text-accent-subtle"
                                 }`}
                               />
                               <span>联网搜索</span>
                             </div>
                             <div
                               className={`w-8 h-4 rounded-full relative transition-colors ${
-                                isSearchMode ? "bg-black" : "bg-gray-200"
+                                isSearchMode ? "bg-accent" : "bg-shell"
                               }`}
                             >
                               <div
-                                className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${
+                                className={`absolute top-0.5 w-3 h-3 rounded-full bg-surface transition-transform ${
                                   isSearchMode ? "left-4.5" : "left-0.5"
                                 }`}
                                 style={{ left: isSearchMode ? "18px" : "2px" }}
@@ -2124,8 +2098,8 @@ export default function App() {
                         onClick={() => setIsThinkingMode((p) => !p)}
                         className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] border ${
                           isThinkingMode
-                            ? "bg-black text-white border-black"
-                            : "border-[#e4d7c8] text-gray-500 bg-white"
+                            ? "bg-accent text-surface border-accent"
+                            : "border-border text-accent-subtle bg-surface"
                         }`}
                         title="思考模式"
                       >
@@ -2136,8 +2110,8 @@ export default function App() {
                         onClick={() => setIsSearchMode((p) => !p)}
                         className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] border ${
                           isSearchMode
-                            ? "bg-black text-white border-black"
-                            : "border-[#e4d7c8] text-gray-500 bg-white"
+                            ? "bg-accent text-surface border-accent"
+                            : "border-border text-accent-subtle bg-surface"
                         }`}
                         title="联网搜索"
                       >
@@ -2152,24 +2126,24 @@ export default function App() {
 
                   {/* 上传菜单 (Restored to original) */}
                   {isUploadMenuOpen && (
-                    <div className="absolute bottom-full left-0 mb-2 w-52 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-50">
-                      <div className="px-3 py-2 border-b border-gray-100 text-xs font-semibold text-gray-500">
+                    <div className="absolute bottom-full left-0 mb-2 w-52 bg-surface border border-border rounded-2xl shadow-soft-card z-50">
+                      <div className="px-3 py-2 border-b border-border text-xs font-semibold text-accent-subtle">
                         上传（开发中）
                       </div>
-                      <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                        <File size={16} className="mr-2 text-gray-500" />{" "}
+                      <button className="flex items-center w-full px-3 py-2 text-left text-sm text-accent-subtle hover:bg-shell transition-colors">
+                        <File size={16} className="mr-2 text-accent-subtle" />{" "}
                         上传文档
                       </button>
-                      <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                        <Image size={16} className="mr-2 text-gray-500" />{" "}
+                      <button className="flex items-center w-full px-3 py-2 text-left text-sm text-accent-subtle hover:bg-shell transition-colors">
+                        <Image size={16} className="mr-2 text-accent-subtle" />{" "}
                         上传图片
                       </button>
-                      <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                        <Video size={16} className="mr-2 text-gray-500" />{" "}
+                      <button className="flex items-center w-full px-3 py-2 text-left text-sm text-accent-subtle hover:bg-shell transition-colors">
+                        <Video size={16} className="mr-2 text-accent-subtle" />{" "}
                         上传视频
                       </button>
-                      <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors rounded-b-2xl">
-                        <Mic size={16} className="mr-2 text-gray-500" />{" "}
+                      <button className="flex items-center w-full px-3 py-2 text-left text-sm text-accent-subtle hover:bg-shell transition-colors rounded-b-2xl">
+                        <Mic size={16} className="mr-2 text-accent-subtle" />{" "}
                         上传音频
                       </button>
                     </div>
@@ -2188,7 +2162,6 @@ export default function App() {
                     onChange={(e) => {
                       setCurrentInput(e.target.value);
                       if (e.target.value.length > 0) {
-                        setSuggestedReplies([]);
                         setIsUploadMenuOpen(false);
                       }
                     }}
@@ -2201,7 +2174,7 @@ export default function App() {
                     placeholder={isLoading ? "正在思考中..." : "提问任何事"}
                     disabled={isLoading}
                     rows={1}
-                    className="flex-1 bg-transparent border-none outline-none text-[14px] sm:text-[15px] placeholder:text-gray-400 resize-none overflow-y-auto max-h-[200px]"
+                    className="flex-1 bg-transparent border-none outline-none text-[14px] sm:text-[15px] placeholder:text-accent-subtle text-accent resize-none overflow-y-auto max-h-[200px]"
                   />
 
                   {/* 模型小标签（桌面显示） */}
@@ -2212,7 +2185,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setIsModelMenuOpen((p) => !p)}
-                      className="inline-flex items-center px-2.5 py-1 rounded-full bg-bubble-hint text-[11px] text-gray-700 hover:bg-[#f1e5d6] border border-[#e6d9ca]"
+                      className="inline-flex items-center px-2.5 py-1 rounded-full bg-bubble-hint text-[11px] text-accent-subtle hover:bg-shell border border-border"
                     >
                       <span className="flex items-center justify-center w-4 h-4 rounded-full mr-1.5">
                         <img
@@ -2229,8 +2202,8 @@ export default function App() {
 
                     {/* 模型选择弹层 */}
                     {isModelMenuOpen && (
-                      <div className="absolute bottom-full right-0 mb-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-50">
-                        <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
+                      <div className="absolute bottom-full right-0 mb-2 w-56 bg-surface border border-border rounded-2xl shadow-soft-card z-50">
+                        <div className="px-3 py-2 border-b border-border flex items-center gap-2">
                           <span className="flex items-center justify-center w-5 h-5 rounded-full ">
                             <img
                               src={GeminiLogo}
@@ -2238,7 +2211,7 @@ export default function App() {
                               className="w-4 h-4"
                             />
                           </span>
-                          <span className="text-xs font-semibold text-gray-600">
+                          <span className="text-xs font-semibold text-accent-subtle">
                             Gemini 模型
                           </span>
                         </div>
@@ -2251,18 +2224,18 @@ export default function App() {
                           }}
                           className={`w-full px-3 py-2 text-left text-sm flex items-center justify-between hover:bg-bubble-hint transition-colors ${
                             selectedModel === "gemini-2.5-flash"
-                              ? "text-gray-900 bg-bubble-hint"
-                              : "text-gray-700"
+                              ? "text-accent bg-bubble-hint"
+                              : "text-accent-subtle"
                           }`}
                         >
                           <div>
                             <div className="font-medium">Gemini 2.5 Flash</div>
-                            <div className="text-xs text-gray-400">
+                            <div className="text-xs text-accent-subtle">
                               快速响应，适合日常对话
                             </div>
                           </div>
                           {selectedModel === "gemini-2.5-flash" && (
-                            <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-black text-white">
+                            <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-accent text-surface">
                               当前
                             </span>
                           )}
@@ -2276,18 +2249,18 @@ export default function App() {
                           }}
                           className={`w-full px-3 py-2 text-left text-sm flex items-center justify-between hover:bg-bubble-hint transition-colors rounded-b-2xl ${
                             selectedModel === "gemini-2.5-pro"
-                              ? "text-gray-900 bg-bubble-hint"
-                              : "text-gray-700"
+                              ? "text-accent bg-bubble-hint"
+                              : "text-accent-subtle"
                           }`}
                         >
                           <div>
                             <div className="font-medium">Gemini 2.5 Pro</div>
-                            <div className="text-xs text-gray-400">
+                            <div className="text-xs text-accent-subtle">
                               更强推理，适合复杂任务
                             </div>
                           </div>
                           {selectedModel === "gemini-2.5-pro" && (
-                            <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-black text-white">
+                            <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-accent text-surface">
                               当前
                             </span>
                           )}
@@ -2300,7 +2273,7 @@ export default function App() {
                   <button
                     type="submit"
                     disabled={isLoading || !currentInput.trim()}
-                    className="ml-3 w-8 h-8 rounded-2xl bg-black text-white flex items-center justify-center shadow-soft-card disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="ml-3 w-8 h-8 rounded-2xl bg-accent text-surface flex items-center justify-center shadow-soft-card disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {isLoading ? (
                       <Loader2 size={18} className="animate-spin" />
@@ -2312,25 +2285,27 @@ export default function App() {
 
                 {/* 上传菜单 */}
                 {isUploadMenuOpen && (
-                  <div className="absolute bottom-full left-0 mb-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-soft-card z-50 overflow-hidden">
+                  <div className="absolute bottom-full left-0 mb-2 w-56 bg-surface border border-border rounded-2xl shadow-soft-card z-50 overflow-hidden">
                     {/* 移动端专属选项 */}
 
-                    <div className="px-3 py-2 border-b border-gray-100 text-xs font-semibold text-gray-500 bg-gray-50">
+                    <div className="px-3 py-2 border-b border-border text-xs font-semibold text-accent-subtle bg-shell">
                       上传（开发中）
                     </div>
-                    <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                      <File size={16} className="mr-2 text-gray-500" /> 上传文档
+                    <button className="flex items-center w-full px-3 py-2 text-left text-sm text-accent hover:bg-shell transition-colors">
+                      <File size={16} className="mr-2 text-accent-subtle" />{" "}
+                      上传文档
                     </button>
-                    <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                      <Image size={16} className="mr-2 text-gray-500" />{" "}
+                    <button className="flex items-center w-full px-3 py-2 text-left text-sm text-accent hover:bg-shell transition-colors">
+                      <Image size={16} className="mr-2 text-accent-subtle" />{" "}
                       上传图片
                     </button>
-                    <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                      <Video size={16} className="mr-2 text-gray-500" />{" "}
+                    <button className="flex items-center w-full px-3 py-2 text-left text-sm text-accent hover:bg-shell transition-colors">
+                      <Video size={16} className="mr-2 text-accent-subtle" />{" "}
                       上传视频
                     </button>
-                    <button className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                      <Mic size={16} className="mr-2 text-gray-500" /> 上传音频
+                    <button className="flex items-center w-full px-3 py-2 text-left text-sm text-accent hover:bg-shell transition-colors">
+                      <Mic size={16} className="mr-2 text-accent-subtle" />{" "}
+                      上传音频
                     </button>
                   </div>
                 )}
@@ -2343,7 +2318,7 @@ export default function App() {
                   disabled={
                     isLoading || isSummaryLoading || messages.length === 0
                   }
-                  className="text-[11px] text-gray-500 hover:text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="text-[11px] text-accent-subtle hover:text-accent disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <span className="inline-flex items-center">
                     <Sparkles size={12} className="mr-1" />
@@ -2352,7 +2327,7 @@ export default function App() {
                 </button>
               </div>
 
-              <p className="mt-3 text-center text-[11px] pb-3 text-gray-400">
+              <p className="mt-3 text-center text-[11px] pb-3 text-accent-subtle/70 dark:text-gray-400">
                 AI can make mistakes. Please double-check responses.
               </p>
             </div>
@@ -2379,6 +2354,7 @@ export default function App() {
           onClose={() => setIsSettingsModalOpen(false)}
           currentGeminiApiKey={userApiKey}
           currentSbConfig={localSbConfig}
+          currentTheme={theme}
           onSave={async (newGeminiKey, _ignored, newSbConfig) => {
             setUserApiKey(newGeminiKey);
             try {
@@ -2405,6 +2381,7 @@ export default function App() {
           isAutoPlayTts={isAutoPlayTts}
           onToggleAutoPlayTts={() => setIsAutoPlayTts((prev) => !prev)}
           onTestSchema={handleTestSchema}
+          onThemeChange={setTheme}
         />
       )}
 
@@ -2422,21 +2399,21 @@ export default function App() {
 
       {isDeleteModalOpen && deleteTargetSession && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-md m-4 rounded-3xl shadow-2xl overflow-hidden p-6">
+          <div className="bg-surface w-full max-w-md m-4 rounded-3xl shadow-2xl overflow-hidden p-6 border border-border">
             <div className="flex items-center mb-4">
               <div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-50 text-red-500 mr-3">
                 <Trash2 size={18} />
               </div>
               <div>
-                <h3 className="text-base font-semibold text-gray-900">
+                <h3 className="text-base font-semibold text-accent">
                   确认删除聊天
                 </h3>
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-accent-subtle">
                   此操作无法撤销，将删除该会话下的所有消息。
                 </p>
               </div>
             </div>
-            <div className="mb-6 text-sm text-gray-700">
+            <div className="mb-6 text-sm text-accent">
               确定要删除「
               <span className="font-medium">
                 {deleteTargetSession.title || "此聊天"}
@@ -2447,7 +2424,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={closeDeleteModal}
-                className="px-5 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+                className="px-5 py-2.5 rounded-xl text-sm font-medium text-accent-subtle hover:bg-shell transition-colors"
               >
                 取消
               </button>

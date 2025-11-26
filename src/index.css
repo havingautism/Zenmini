@@ -2,11 +2,44 @@
 @tailwind components;
 @tailwind utilities;
 
-/* App-wide base styles */
-body {
-  /* 这里不用 @apply bg-shell，避免 Tailwind 报未定义 */
-  background-color: #f5f3f0;
-  @apply font-sans text-[15px] text-gray-900;
+:root {
+  /* Light Theme */
+  --color-shell: #f5f3f0;
+  --color-surface: #f3f3f3;
+  --color-bubble-user: #111827;
+  --color-bubble-bot: #ffffff;
+  --color-text-main: #111827;
+  --color-text-muted: #6b7280;
+  --color-border: #e5e7eb;
+  --color-input-bg: #ffffff;
+  --color-text-bubble-user: #ffffff;
+  --color-text-bubble-bot: #111827;
+  --color-highlight: #ffffff;
+}
+
+html.dark {
+  /* Dark Theme - Perplexity Style */
+  --color-shell: #191919;
+  --color-surface: #212121;
+  --color-bubble-user: #2d2d2d;
+  --color-bubble-bot: transparent;
+  --color-text-main: #e5e7eb;
+  --color-text-muted: #9ca3af;
+  --color-border: #333333;
+  --color-input-bg: #2d2d2d;
+  --color-text-bubble-user: #ffffff;
+  --color-text-bubble-bot: #e5e7eb;
+  --color-highlight: #121212;
+}
+
+@layer base {
+  html {
+    @apply font-sans text-[15px] antialiased;
+  }
+
+  body {
+    @apply bg-shell text-accent transition-colors duration-300;
+  }
 }
 
 #root {
