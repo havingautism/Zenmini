@@ -3,6 +3,8 @@ import {
   X,
   Settings,
   Monitor,
+  Sun,
+  Moon,
   Cpu,
   MessageSquare,
   Palette,
@@ -15,6 +17,84 @@ import {
 } from "lucide-react";
 import InputWithIcon from "./InputWithIcon";
 
+const THEME_OPTIONS = [
+  {
+    value: "light",
+    label: "浅色模式",
+    description: "适合白天阅读，画面更加通透。",
+    Icon: Sun,
+  },
+  {
+    value: "dark",
+    label: "深色模式",
+    description: "降低眩光，更适合在夜间使用。",
+    Icon: Moon,
+  },
+  {
+    value: "system",
+    label: "跟随系统",
+    description: "自动与系统明暗设置保持一致。",
+    Icon: Monitor,
+  },
+];
+
+function ThemeOptionsSection({ currentTheme, onSelect }) {
+  return (
+    <section className="space-y-4">
+      <div>
+        <h4 className="text-sm font-medium text-accent mb-1">界面主题</h4>
+        <p className="text-xs text-accent-subtle">
+          在这里切换明亮 / 暗夜模式，移动端同样适用。
+        </p>
+      </div>
+      <div className="space-y-3">
+        {THEME_OPTIONS.map(({ value, label, description, Icon }) => {
+          const isActive = currentTheme === value;
+          return (
+            <button
+              type="button"
+              key={value}
+              onClick={() => onSelect && onSelect(value)}
+              className={`w-full px-4 py-3 rounded-2xl border flex items-center justify-between transition-all ${
+                isActive
+                  ? "border-accent bg-bubble-hint text-accent shadow-sm"
+                  : "border-border text-accent"
+              }`}
+            >
+              <div className="flex items-center gap-3 text-left">
+                <div
+                  className={`w-10 h-10 rounded-2xl flex items-center justify-center ${
+                    isActive
+                      ? "bg-accent text-surface shadow"
+                      : "bg-shell text-accent-subtle"
+                  }`}
+                >
+                  <Icon size={18} />
+                </div>
+                <div>
+                  <div className="text-sm font-medium">{label}</div>
+                  <div className="text-xs text-accent-subtle">
+                    {description}
+                  </div>
+                </div>
+              </div>
+              <span
+                className={`w-5 h-5 rounded-full border flex items-center justify-center ${
+                  isActive ? "border-accent bg-accent/10" : "border-border"
+                }`}
+              >
+                {isActive && (
+                  <span className="w-2.5 h-2.5 rounded-full bg-accent" />
+                )}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export default function SettingsModal({
   isOpen,
   onClose,
@@ -24,12 +104,18 @@ export default function SettingsModal({
   isAutoPlayTts,
   onToggleAutoPlayTts,
   onTestSchema,
+  currentTheme = "system",
+  onThemeChange,
 }) {
   const [activeTab, setActiveTab] = useState("general");
   const [localGeminiKey, setLocalGeminiKey] = useState(currentGeminiApiKey);
   const [sbConfig, setSbConfig] = useState(
     currentSbConfig || { url: "", anonKey: "" }
   );
+
+  const handleThemeSelect = (value) => {
+    if (onThemeChange) onThemeChange(value);
+  };
 
   const handleSave = () => {
     onSave(localGeminiKey, null, sbConfig);
@@ -213,6 +299,15 @@ export default function SettingsModal({
             </div>
           )}
 
+          {activeTab === "interface" && (
+            <div className="space-y-6">
+              <ThemeOptionsSection
+                currentTheme={currentTheme}
+                onSelect={handleThemeSelect}
+              />
+            </div>
+          )}
+
           {activeTab === "chat" && (
             <div className="space-y-4">
               <div className="flex items-center justify-between py-2 px-3 rounded-xl hover:bg-shell transition-colors">
@@ -290,7 +385,7 @@ export default function SettingsModal({
             </div>
           )}
 
-          {["interface", "model", "personalization", "account"].includes(
+          {["model", "personalization", "account"].includes(
             activeTab
           ) && (
             <div className="flex flex-col items-center justify-center h-48 text-accent-subtle">
@@ -492,6 +587,15 @@ export default function SettingsModal({
               </div>
             )}
 
+            {activeTab === "interface" && (
+              <div className="space-y-8 max-w-2xl">
+                <ThemeOptionsSection
+                  currentTheme={currentTheme}
+                  onSelect={handleThemeSelect}
+                />
+              </div>
+            )}
+
             {activeTab === "chat" && (
               <div className="space-y-8 max-w-2xl">
                 <section className="space-y-4">
@@ -576,7 +680,7 @@ export default function SettingsModal({
               </div>
             )}
 
-            {["interface", "model", "personalization", "account"].includes(
+            {["model", "personalization", "account"].includes(
               activeTab
             ) && (
               <div className="flex flex-col items-center justify-center h-64 text-accent-subtle">

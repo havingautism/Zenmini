@@ -20,7 +20,7 @@
 html.dark {
   /* Dark Theme - Perplexity Style */
   --color-shell: #191919;
-  --color-surface: #0e0e0ec2;
+  --color-surface: #212121;
   --color-bubble-user: #2d2d2d;
   --color-bubble-bot: transparent;
   --color-text-main: #e5e7eb;
@@ -29,7 +29,7 @@ html.dark {
   --color-input-bg: #2d2d2d;
   --color-text-bubble-user: #ffffff;
   --color-text-bubble-bot: #e5e7eb;
-  --color-highlight: #1b1b1b;
+  --color-highlight: #121212;
 }
 
 @layer base {

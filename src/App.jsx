@@ -83,6 +83,41 @@ import SchemaInitModal from "./components/SchemaInitModal";
 import Loader from "./components/Loader";
 import BlackHole from "./components/BlackHole";
 
+const THEME_TOGGLE_OPTIONS = [
+  { value: "light", title: "浅色模式", Icon: Sun },
+  { value: "dark", title: "深色模式", Icon: Moon },
+  { value: "system", title: "跟随系统", Icon: Monitor },
+];
+
+function ThemeToggleButtons({ currentTheme, onSelect, className = "" }) {
+  return (
+    <div className={className}>
+      {THEME_TOGGLE_OPTIONS.map(({ value, Icon, title }) => {
+        const isActive = currentTheme === value;
+        const activeClasses =
+          value === "system"
+            ? "bg-shell text-accent shadow-md scale-110"
+            : "bg-accent text-surface shadow-md scale-110";
+        const inactiveClasses = "text-accent-subtle hover:text-accent";
+
+        return (
+          <button
+            type="button"
+            key={value}
+            onClick={() => onSelect(value)}
+            className={`w-9 h-9 rounded-2xl flex items-center justify-center transition-all duration-200 ${
+              isActive ? activeClasses : inactiveClasses
+            }`}
+            title={title}
+          >
+            <Icon size={16} />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function App() {
   const { theme, setTheme } = useTheme();
   const [client, setClient] = useState(null);
@@ -168,11 +203,12 @@ export default function App() {
   // 初始化 Supabase
   const initApp = async (cid) => {
     console.log("[initApp] Starting with cid:", cid);
-    let configToUse = loadSupabaseConfigFromLocalStorage();
-    console.log("[initApp] Config from localStorage:", configToUse);
+    let configToUse = loadSupabaseConfigFromEnv();
+    console.log("[initApp] Config from env:", configToUse);
+
     if (!configToUse) {
-      configToUse = loadSupabaseConfigFromEnv();
-      console.log("[initApp] Config from env:", configToUse);
+      configToUse = loadSupabaseConfigFromLocalStorage();
+      console.log("[initApp] Config from localStorage:", configToUse);
     }
     if (configToUse) setLocalSbConfig(configToUse);
 
@@ -1524,9 +1560,9 @@ export default function App() {
     <div className="h-screen w-full bg-shell flex items-center justify-center p-0 sm:p-2 text-accent transition-colors duration-300">
       <div className="relative flex w-full  h-full  bg-surface rounded-none sm:rounded-4xl shadow-soft-card border border-border overflow-hidden">
         {/* 左侧竖向图标栏（桌面端可见） */}
-        <div className="hidden sm:flex flex-col justify-between py-5 px-8 w-12 shadow-soft-card">
+        <div className="hidden sm:flex flex-col bg-surface justify-between py-5 px-8 w-12 ">
           <div className="flex flex-col items-center space-y-5">
-              <button
+            <button
               onClick={handleNewChat}
               className="w-9 h-9 rounded-2xl shadow-soft-card bg-accent text-surface flex items-center justify-center"
               title="新建对话"
@@ -1546,41 +1582,11 @@ export default function App() {
           </div>
 
           {/* Theme Switcher */}
-          <div className="flex flex-col items-center space-y-3">
-            <button
-              onClick={() => setTheme("light")}
-              className={`w-9 h-9 rounded-2xl flex items-center justify-center transition-all duration-200 ${
-                theme === "light"
-                  ? "bg-accent text-surface shadow-md scale-110"
-                  : "text-accent-subtle hover:text-accent"
-              }`}
-              title="浅色模式"
-            >
-              <Sun size={16} />
-            </button>
-            <button
-              onClick={() => setTheme("dark")}
-              className={`w-9 h-9 rounded-2xl flex items-center justify-center transition-all duration-200 ${
-                theme === "dark"
-                  ? "bg-accent text-surface shadow-md scale-110"
-                  : "text-accent-subtle hover:text-accent"
-              }`}
-              title="深色模式"
-            >
-              <Moon size={16} />
-            </button>
-            <button
-              onClick={() => setTheme("system")}
-              className={`w-9 h-9 rounded-2xl flex items-center justify-center transition-all duration-200 ${
-                theme === "system"
-                  ? "bg-shell text-accent shadow-md scale-110"
-                  : "text-accent-subtle hover:text-accent"
-              }`}
-              title="跟随系统"
-            >
-              <Monitor size={16} />
-            </button>
-          </div>
+          <ThemeToggleButtons
+            currentTheme={theme}
+            onSelect={setTheme}
+            className="flex flex-col items-center space-y-3"
+          />
         </div>
 
         {showMobileOverlay && (
@@ -1825,15 +1831,15 @@ export default function App() {
             <div className="flex items-center gap-2 sm:hidden">
               <button
                 type="button"
-                className="w-8 h-8 rounded-2xl border shadow-soft-card border-[#e4d9ce] flex items-center justify-center text-gray-400 bg-white/80"
+                className="w-8 h-8 rounded-2xl shadow-soft-card bg-surface text-accent-subtle border border-border flex items-center justify-center hover:bg-shell transition-colors"
                 onClick={() => setIsSidebarOpen(true)}
               >
-                <History size={15} color="black" />
+                <History size={15} />
               </button>
               <button
                 type="button"
                 onClick={handleNewChat}
-                className="w-8 h-8 rounded-2xl bg-black text-white flex items-center justify-center shadow-soft-card"
+                className="w-8 h-8 rounded-2xl bg-accent text-surface flex items-center justify-center shadow-soft-card hover:bg-accent/90 transition-colors"
               >
                 <MessageSquarePlus size={15} />
               </button>
@@ -1965,7 +1971,6 @@ export default function App() {
                           return next;
                         })
                       }
-                      
                       className="w-6 h-6 rounded-full border border-border flex items-center justify-center hover:bg-shell transition-colors"
                       title="上传文件"
                     >
@@ -2078,7 +2083,9 @@ export default function App() {
                               <Globe
                                 size={16}
                                 className={`mr-2 ${
-                                  isSearchMode ? "text-accent" : "text-accent-subtle"
+                                  isSearchMode
+                                    ? "text-accent"
+                                    : "text-accent-subtle"
                                 }`}
                               />
                               <span>联网搜索</span>
@@ -2302,7 +2309,8 @@ export default function App() {
                       上传（开发中）
                     </div>
                     <button className="flex items-center w-full px-3 py-2 text-left text-sm text-accent hover:bg-shell transition-colors">
-                      <File size={16} className="mr-2 text-accent-subtle" /> 上传文档
+                      <File size={16} className="mr-2 text-accent-subtle" />{" "}
+                      上传文档
                     </button>
                     <button className="flex items-center w-full px-3 py-2 text-left text-sm text-accent hover:bg-shell transition-colors">
                       <Image size={16} className="mr-2 text-accent-subtle" />{" "}
@@ -2313,7 +2321,8 @@ export default function App() {
                       上传视频
                     </button>
                     <button className="flex items-center w-full px-3 py-2 text-left text-sm text-accent hover:bg-shell transition-colors">
-                      <Mic size={16} className="mr-2 text-accent-subtle" /> 上传音频
+                      <Mic size={16} className="mr-2 text-accent-subtle" />{" "}
+                      上传音频
                     </button>
                   </div>
                 )}
@@ -2335,7 +2344,7 @@ export default function App() {
                 </button>
               </div>
 
-              <p className="mt-3 text-center text-[11px] pb-3 text-accent-subtle/70">
+              <p className="mt-3 text-center text-[11px] pb-3 text-accent-subtle/70 dark:text-gray-400">
                 AI can make mistakes. Please double-check responses.
               </p>
             </div>
@@ -2362,6 +2371,7 @@ export default function App() {
           onClose={() => setIsSettingsModalOpen(false)}
           currentGeminiApiKey={userApiKey}
           currentSbConfig={localSbConfig}
+          currentTheme={theme}
           onSave={async (newGeminiKey, _ignored, newSbConfig) => {
             setUserApiKey(newGeminiKey);
             try {
@@ -2388,6 +2398,7 @@ export default function App() {
           isAutoPlayTts={isAutoPlayTts}
           onToggleAutoPlayTts={() => setIsAutoPlayTts((prev) => !prev)}
           onTestSchema={handleTestSchema}
+          onThemeChange={setTheme}
         />
       )}
 
