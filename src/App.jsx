@@ -136,8 +136,6 @@ export default function App() {
   const [summaryContent, setSummaryContent] = useState("");
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
 
-  const [suggestedReplies, setSuggestedReplies] = useState([]);
-
   const [isTtsLoading, setIsTtsLoading] = useState(null);
   const [playingMessageId, setPlayingMessageId] = useState(null);
 
@@ -243,7 +241,7 @@ export default function App() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, suggestedReplies, isLoading]);
+  }, [messages, isLoading]);
 
   useEffect(() => {
     if (!isUploadMenuOpen && !isMobileOptionsOpen) return;
@@ -381,28 +379,14 @@ export default function App() {
               msg.generatedWithThinking || msg.generated_with_thinking,
             generatedWithSearch:
               msg.generatedWithSearch || msg.generated_with_search,
+            suggestedReplies: Array.isArray(msg.suggestedReplies)
+              ? msg.suggestedReplies
+              : Array.isArray(msg.suggested_replies)
+              ? msg.suggested_replies
+              : [],
           }));
 
           setMessages(mappedMessages || []);
-
-          // 检查最后一条消息是否有延伸问题，如果有则显示
-          const lastMessage = mappedMessages[mappedMessages.length - 1];
-          if (lastMessage && lastMessage.role === "model") {
-            try {
-              const replies = Array.isArray(lastMessage.suggested_replies)
-                ? lastMessage.suggested_replies
-                : Array.isArray(lastMessage.suggestedReplies)
-                ? lastMessage.suggestedReplies
-                : [];
-              setSuggestedReplies(replies);
-            } catch (e) {
-              console.warn(
-                "suggested_replies field not available in database:",
-                e
-              );
-              setSuggestedReplies([]);
-            }
-          }
         }
       } catch (e) {
         console.error("Failed to load history messages:", e);
@@ -427,8 +411,7 @@ export default function App() {
     [messages]
   );
 
-  const fetchSuggestedReplies = async (history, updateLocalState = true) => {
-    if (updateLocalState) setSuggestedReplies([]);
+  const fetchSuggestedReplies = async (history) => {
     const systemPrompt =
       "Based on the *last* message in the conversation, generate 3 very short, concise, one-click replies for the user to send next. The replies should be in the same language as the conversation (e.g., Chinese if the convo is in Chinese). Only output the JSON object.";
     const schema = {
@@ -446,7 +429,6 @@ export default function App() {
         userApiKey
       );
       const replies = result && result.replies ? result.replies : [];
-      if (updateLocalState) setSuggestedReplies(replies);
       return replies;
     } catch (e) {
       console.error("Failed to fetch suggested replies:", e);
@@ -458,7 +440,6 @@ export default function App() {
     setSessionMenuId(null);
     setActiveSessionId(null);
     setMessages([]);
-    setSuggestedReplies([]);
     setIsSessionActive(false);
     setIsSidebarOpen(false);
 
@@ -519,7 +500,6 @@ export default function App() {
       if (activeSessionId === sessionId) {
         setActiveSessionId(null);
         setMessages([]);
-        setSuggestedReplies([]);
         setIsSessionActive(false);
       }
     } catch (err) {
@@ -588,7 +568,6 @@ export default function App() {
       // 切换会话时清空当前 UI，并展示加载态
       setIsSessionActive(false);
       setMessages([]);
-      setSuggestedReplies([]);
       setIsSessionLoading(true);
       setActiveSessionId(id);
     }
@@ -607,7 +586,6 @@ export default function App() {
 
     setIsLoading(true);
     setCurrentInput("");
-    setSuggestedReplies([]);
     setIsSessionActive(true);
 
     const userMessage = {
@@ -676,6 +654,7 @@ export default function App() {
           generatedWithThinking: isThinkingMode && !suppressThinkingBubble,
           generatedWithSearch: isSearchMode,
           created_at: modelCreatedAt,
+          suggestedReplies: [],
         },
       ]);
 
@@ -818,15 +797,18 @@ export default function App() {
 
       let suggestedReplies = [];
       try {
-        suggestedReplies = await fetchSuggestedReplies(
-          finalHistoryForReplies,
-          false
-        );
-        setSuggestedReplies(suggestedReplies);
+        suggestedReplies = await fetchSuggestedReplies(finalHistoryForReplies);
       } catch (e) {
         console.error("Failed to fetch suggested replies:", e);
-        setSuggestedReplies([]);
+        suggestedReplies = [];
       }
+
+      const repliesForState = suggestedReplies;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === modelMessageId ? { ...m, suggestedReplies: repliesForState } : m
+        )
+      );
 
       setTimeout(async () => {
         try {
@@ -922,7 +904,6 @@ export default function App() {
 
     setIsLoading(true);
     setCurrentInput("");
-    setSuggestedReplies([]);
     setIsSessionActive(true); // 标记会话为活跃状态
 
     // 创建用户消息并立即显示
@@ -986,6 +967,7 @@ export default function App() {
         generatedWithThinking: !!aiResponse.thinkingProcess,
         generatedWithSearch: isSearchMode,
         created_at: new Date().toISOString(),
+        suggestedReplies: [],
       };
 
       setMessages((prev) => [...prev, modelMessage]);
@@ -999,16 +981,18 @@ export default function App() {
       // 获取延伸问题并保存到数据库
       let suggestedReplies = [];
       try {
-        suggestedReplies = await fetchSuggestedReplies(
-          finalHistoryForReplies,
-          false
-        );
-        // 手动更新延伸问题显示
-        setSuggestedReplies(suggestedReplies);
+        suggestedReplies = await fetchSuggestedReplies(finalHistoryForReplies);
       } catch (e) {
         console.error("Failed to fetch suggested replies:", e);
-        setSuggestedReplies([]);
+        suggestedReplies = [];
       }
+
+      const repliesForState = suggestedReplies;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === modelMessage.id ? { ...m, suggestedReplies: repliesForState } : m
+        )
+      );
 
       // 后台异步保存AI消息到数据库（包含延伸问题，完全不阻塞UI）
       setTimeout(() => {
@@ -1215,7 +1199,6 @@ export default function App() {
     const db = client;
     if (isLoading || !userId || !activeSessionId || !db) return;
     setIsLoading(true);
-    setSuggestedReplies([]);
     setIsSessionActive(true);
 
     let modelMessageId = null;
@@ -1251,6 +1234,7 @@ export default function App() {
           generatedWithThinking: isThinkingMode,
           generatedWithSearch: isSearchMode,
           created_at: modelCreatedAt,
+          suggestedReplies: [],
         },
       ]);
 
@@ -1417,15 +1401,18 @@ export default function App() {
 
       let suggestedReplies = [];
       try {
-        suggestedReplies = await fetchSuggestedReplies(
-          finalHistoryForReplies,
-          false
-        );
-        setSuggestedReplies(suggestedReplies);
+        suggestedReplies = await fetchSuggestedReplies(finalHistoryForReplies);
       } catch (e) {
         console.error("Failed to fetch suggested replies:", e);
-        setSuggestedReplies([]);
+        suggestedReplies = [];
       }
+
+      const repliesForState = suggestedReplies;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === modelMessageId ? { ...m, suggestedReplies: repliesForState } : m
+        )
+      );
 
       setTimeout(async () => {
         try {
@@ -1922,9 +1909,6 @@ export default function App() {
                           .slice(index + 1)
                           .every((m) => m.role !== "model")
                       }
-                      suggestedReplies={
-                        index === messages.length - 1 ? suggestedReplies : []
-                      }
                       onSuggestedReplyClick={handleSuggestedReplyClick}
                     />
                   ))}
@@ -2178,7 +2162,6 @@ export default function App() {
                     onChange={(e) => {
                       setCurrentInput(e.target.value);
                       if (e.target.value.length > 0) {
-                        setSuggestedReplies([]);
                         setIsUploadMenuOpen(false);
                       }
                     }}

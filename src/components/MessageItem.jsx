@@ -42,37 +42,17 @@ export default function MessageItem({
   copiedMessageId,
   onRegenerate,
   isLastModelMessage,
-  suggestedReplies,
   onSuggestedReplyClick,
 }) {
   const isUser = msg.role === "user";
   const areSourcesVisible = expandedSourcesMessageId === msg.id;
   const [isThinkingVisible, setIsThinkingVisible] = useState(false);
   const [thinkingPhaseIndex, setThinkingPhaseIndex] = useState(0);
-  const suggestedRepliesRef = React.useRef(null);
-  const [showSuggestionsLeftHint, setShowSuggestionsLeftHint] = useState(false);
-  const [showSuggestionsRightHint, setShowSuggestionsRightHint] = useState(false);
-
-  // Handle suggested replies scroll hint
-  useEffect(() => {
-    const el = suggestedRepliesRef.current;
-    if (!el) return;
-
-    const handleScroll = () => {
-      setShowSuggestionsLeftHint(el.scrollLeft > 0);
-      setShowSuggestionsRightHint(
-        el.scrollLeft < el.scrollWidth - el.clientWidth - 5
-      );
-    };
-
-    handleScroll(); // Initial check
-    el.addEventListener("scroll", handleScroll);
-    window.addEventListener("resize", handleScroll);
-    return () => {
-      el.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleScroll);
-    };
-  }, [suggestedReplies]);
+  const messageSuggestedReplies = Array.isArray(msg.suggestedReplies)
+    ? msg.suggestedReplies
+    : Array.isArray(msg.suggested_replies)
+    ? msg.suggested_replies
+    : [];
 
   const isLoadingBubble = !isUser && msg.isLoading && !msg.content;
   const isThinkingLoading =
@@ -90,8 +70,7 @@ export default function MessageItem({
     return () => clearInterval(timer);
   }, [isThinkingLoading]);
 
-  const botBubbleClass =
-    "bg-transparent text-accent w-full ";
+  const botBubbleClass = "bg-transparent text-accent w-full ";
 
   return (
     <div className="flex justify-center">
@@ -255,39 +234,19 @@ export default function MessageItem({
               </div>
             )}
 
-            {/* Suggested Replies (Only for last model message) */}
-            {isLastModelMessage && suggestedReplies && suggestedReplies.length > 0 && (
+            {/* Suggested Replies (stored per model message) */}
+            {!isUser && messageSuggestedReplies.length > 0 && (
               <div className="mt-5 pt-2 border-t border-border">
-                <div className="relative mb-2">
-                  <div
-                    ref={suggestedRepliesRef}
-                    className="flex items-center gap-2 overflow-x-auto flex-nowrap pt-2 [&::-webkit-scrollbar]:hidden"
-                    style={{
-                      scrollbarWidth: "none",
-                      msOverflowStyle: "none",
-                      WebkitOverflowScrolling: "touch",
-                    }}
-                  >
-                    {suggestedReplies.map((reply, index) => (
-                      <button
-                        key={index}
-                        onClick={() => onSuggestedReplyClick(reply)}
-                        className="px-3 py-2 rounded-3xl bg-shell text-[13px] border border-border text-accent hover:bg-surface transition-colors whitespace-nowrap"
-                      >
-                        <SuggestedReplyMarkdown content={reply} />
-                      </button>
-                    ))}
-                  </div>
-                  {showSuggestionsLeftHint && (
-                    <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-surface via-surface/80 to-transparent rounded-l-3xl flex items-center pl-1 text-accent-subtle">
-                      <ChevronLeft size={14} />
-                    </div>
-                  )}
-                  {showSuggestionsRightHint && (
-                    <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-surface via-surface/80 to-transparent rounded-r-3xl flex items-center justify-end pr-1 text-accent-subtle">
-                      <ChevronRight size={14} />
-                    </div>
-                  )}
+                <div className="pt-2 flex flex-wrap gap-2">
+                  {messageSuggestedReplies.map((reply, index) => (
+                    <button
+                      key={index}
+                      onClick={() => onSuggestedReplyClick(reply)}
+                      className="px-3 py-2 rounded-3xl bg-shell text-[13px] border border-border text-accent hover:bg-surface transition-colors"
+                    >
+                      <SuggestedReplyMarkdown content={reply} />
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
